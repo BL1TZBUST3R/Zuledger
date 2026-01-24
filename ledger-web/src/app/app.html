@@ -1,28 +1,32 @@
-<div class="flex h-screen bg-gray-100 font-sans">
+@if (router.url === '/login' || router.url === '/register') {
     
-    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl">
-        <div class="h-16 flex items-center justify-center border-b border-slate-800">
-            <h1 class="text-white text-xl font-bold tracking-wider">ZU<span class="text-blue-500">LEDGER</span></h1>
-        </div>
+    <router-outlet></router-outlet>
 
-        <nav class="flex-1 px-4 py-6 space-y-2">
-            <a routerLink="/dashboard" routerLinkActive="bg-blue-600 text-white" class="flex items-center px-4 py-3 rounded-lg transition-colors hover:bg-slate-800 cursor-pointer">
-                <span>Dashboard</span>
-            </a>
+} @else {
 
-            <a routerLink="/accounts" routerLinkActive="bg-blue-600 text-white" class="flex items-center px-4 py-3 rounded-lg transition-colors hover:bg-slate-800 cursor-pointer">
-                <span>Chart of Accounts</span>
-            </a>
-        </nav>
-    </aside>
+    <div class="flex h-screen bg-gray-100 font-sans">
+        
+        <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl">
+            <div class="h-16 flex items-center justify-center border-b border-slate-800">
+                <h1 class="text-white text-xl font-bold tracking-wider">ZU<span class="text-blue-500">LEDGER</span></h1>
+            </div>
 
-   <main class="flex-1 overflow-y-auto">
-        <div class="p-8">
-            
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a routerLink="/dashboard" routerLinkActive="bg-blue-600 text-white" class="flex items-center px-4 py-3 rounded-lg transition-colors hover:bg-slate-800 cursor-pointer">
+                    <span>Dashboard</span>
+                </a>
 
-            
-            <router-outlet></router-outlet>
-        </div>
-    </main>
+                <a routerLink="/accounts" routerLinkActive="bg-blue-600 text-white" class="flex items-center px-4 py-3 rounded-lg transition-colors hover:bg-slate-800 cursor-pointer">
+                    <span>Chart of Accounts</span>
+                </a>
+            </nav>
+        </aside>
 
-</div>
+        <main class="flex-1 overflow-y-auto">
+            <div class="p-8">
+                <router-outlet></router-outlet>
+            </div>
+        </main>
+
+    </div>
+}
