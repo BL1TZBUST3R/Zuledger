@@ -13,18 +13,31 @@ return new class extends Migration
 {
     Schema::create('accounts', function (Blueprint $table) {
         $table->id();
-        $table->string('name');             // e.g. "Cash on Hand"
-        $table->string('code')->unique();   // e.g. "1001" (Must be unique)
+
+        // 1. 👇 CRITICAL: Link this account to a specific user
+        $table->foreignId('user_id')->constrained()->onDelete('cascade');
+
+        $table->string('name');
+        
+        // 2. 👇 CHANGED: Removed 'unique()' here. 
+        // We will make it unique per user at the bottom.
+        $table->string('code'); 
+
         $table->enum('type', [
             'asset', 
             'liability', 
             'equity', 
             'income', 
             'expense'
-        ]);                                 // The 5 main accounting categories
+        ]);
+
         $table->text('description')->nullable();
-        $table->decimal('opening_balance', 15, 2)->default(0.00); 
+        $table->decimal('opening_balance', 15, 2)->default(0.00);
         $table->timestamps();
+
+        // 3. 👇 NEW RULE: The Code must be unique ONLY for this specific user.
+        // (Accountant A can have '1001', and Accountant B can also have '1001')
+        $table->unique(['user_id', 'code']);
     });
 }
 
