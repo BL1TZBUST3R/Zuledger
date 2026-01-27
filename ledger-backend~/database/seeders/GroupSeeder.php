@@ -2,46 +2,95 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Group;
+use App\Models\User;
 
 class GroupSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     * Use this to seed groups for a SPECIFIC user.
      */
-public function run(): void
+    public function run(User $user = null): void
     {
-        // 1. Assets
-        \App\Models\Group::create([
-            'id' => 1,
+        // If no user is passed, don't run (safety check)
+        if (!$user) return;
+
+        // 1. ASSETS
+        $assets = Group::create([
+            'user_id' => $user->id,
             'name' => 'Assets',
-            'code' => 'A',
-            'parent_id' => null
+            'code' => '1000',
+            'affects_gross' => 0
         ]);
-
-        // 2. Liabilities
-        \App\Models\Group::create([
-            'id' => 2,
+        
+        // 2. LIABILITIES
+        $liabilities = Group::create([
+            'user_id' => $user->id,
             'name' => 'Liabilities',
-            'code' => 'L',
-            'parent_id' => null
+            'code' => '2000',
+            'affects_gross' => 0
         ]);
 
-        // 3. Income
-        \App\Models\Group::create([
-            'id' => 3,
+        // 3. EQUITY
+        $equity = Group::create([
+            'user_id' => $user->id,
+            'name' => 'Equity',
+            'code' => '3000',
+            'affects_gross' => 0
+        ]);
+
+        // 4. INCOME
+        $income = Group::create([
+            'user_id' => $user->id,
             'name' => 'Income',
-            'code' => 'I',
-            'parent_id' => null
+            'code' => '4000',
+            'affects_gross' => 0
         ]);
 
-        // 4. Expenses
-        \App\Models\Group::create([
-            'id' => 4,
+        // 5. EXPENSES
+        $expenses = Group::create([
+            'user_id' => $user->id,
             'name' => 'Expenses',
-            'code' => 'E',
-            'parent_id' => null
+            'code' => '5000',
+            'affects_gross' => 0
+        ]);
+
+        // --- SUB-GROUPS (The "Children") ---
+
+        // Current Assets (Child of Assets)
+        Group::create([
+            'user_id' => $user->id,
+            'parent_id' => $assets->id,
+            'name' => 'Current Assets',
+            'code' => '1100'
+        ]);
+
+        // Fixed Assets (Child of Assets)
+        Group::create([
+            'user_id' => $user->id,
+            'parent_id' => $assets->id,
+            'name' => 'Fixed Assets',
+            'code' => '1200'
+        ]);
+
+        // Direct Income (Child of Income) - Affects Gross Profit!
+        Group::create([
+            'user_id' => $user->id,
+            'parent_id' => $income->id,
+            'name' => 'Direct Income',
+            'code' => '4100',
+            'affects_gross' => 1
+        ]);
+
+        // Direct Expenses (Child of Expenses) - Affects Gross Profit!
+        Group::create([
+            'user_id' => $user->id,
+            'parent_id' => $expenses->id,
+            'name' => 'Direct Expenses',
+            'code' => '5100',
+            'affects_gross' => 1
         ]);
     }
 }

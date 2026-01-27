@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Database\Seeders\GroupSeeder; // 👈 1. ADD THIS IMPORT
 
 class AuthController extends Controller
 {
@@ -15,7 +16,7 @@ class AuthController extends Controller
         $fields = $request->validate([
             'name' => 'required|string',
             'email' => 'required|string|unique:users,email',
-            'password' => 'required|string|confirmed' // Expects 'password_confirmation' field
+            'password' => 'required|string|confirmed' 
         ]);
 
         // Create the user
@@ -24,6 +25,11 @@ class AuthController extends Controller
             'email' => $fields['email'],
             'password' => Hash::make($fields['password'])
         ]);
+
+        // 👇 2. ADD THIS BLOCK: Run the seeder for this new user
+        $seeder = new GroupSeeder();
+        $seeder->run($user);
+        // 👆 END NEW BLOCK
 
         // Create a security token
         $token = $user->createToken('myapptoken')->plainTextToken;

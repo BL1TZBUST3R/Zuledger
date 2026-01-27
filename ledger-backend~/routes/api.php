@@ -1,19 +1,21 @@
 <?php
 
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GroupController; // 👈 Don't forget this import!
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
 
-// Public Routes (No Login Needed)
+// Public Routes
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected Routes (Must have Token)
+// Protected Routes (Must be Logged In)
 Route::group(['middleware' => ['auth:sanctum']], function () {
+    
     Route::post('/logout', [AuthController::class, 'logout']);
     
-    // Test route to get logged-in user info
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    // 👇 NEW: Group Routes
+    Route::get('/groups', [GroupController::class, 'index']);
+    Route::post('/groups', [GroupController::class, 'store']);
+
 });
