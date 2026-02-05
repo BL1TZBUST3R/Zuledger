@@ -1,41 +1,55 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router'; // Import Router
-import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
-import { AuthService } from '../../services/auth'; // Import your service
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, HttpClientModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.html',
-  styleUrl: './login.css'
 })
 export class LoginComponent {
+  loginForm: FormGroup;
+  isLoading = false;
+  errorMessage = '';
 
-  credentials = {
-    email: '',
-    password: ''
-  };
-
-  constructor(private authService: AuthService, private router: Router) {}
-
-  onLogin() {
-    this.authService.login(this.credentials).subscribe({
-      next: (response: any) => {
-        console.log('Login Success:', response);
-        
-        // 1. Save the token (The "Key" to the dashboard)
-        localStorage.setItem('auth_token', response.token);
-        
-        // 2. Go to Dashboard
-        this.router.navigate(['/dashboard']);
-      },
-      error: (error: any) => {
-        console.error('Login Failed:', error);
-        alert('Login Failed: ' + (error.error?.message || 'Check your email/password'));
-      }
+  constructor(
+    private fb: FormBuilder,
+    private http: HttpClient,
+    private router: Router
+  ) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required]
     });
+  }
+
+  onSubmit() {
+    if (this.loginForm.invalid) return;
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    // 1. Send Login Request
+    this.http.post<any>('http://localhost:8000/api/login', this.loginForm.value)
+      .subscribe({
+        next: (response) => {
+          console.log('Login Success:', response);
+
+          // 👇 THIS IS THE MISSING MAGIC LINE!
+          // We must save the token so the Interceptor can find it later.
+          localStorage.setItem('token', response.token);
+
+          // 2. Navigate to Dashboard
+          this.router.navigate(['/accounts']); 
+        },
+        error: (error) => {
+          console.error('Login Failed:', error);
+          this.errorMessage = 'Invalid email or password';
+          this.isLoading = false;
+        }
+      });
   }
 }

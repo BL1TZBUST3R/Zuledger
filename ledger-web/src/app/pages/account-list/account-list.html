@@ -1,29 +1,124 @@
-<div class="bg-white p-6 rounded-lg shadow-md">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-slate-800">Chart of Accounts</h2>
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 h-full flex flex-col">
+    
+    <div class="p-6 flex justify-between items-center border-b border-slate-100">
+        <div>
+            <h2 class="text-xl font-bold text-slate-800">Chart of Accounts</h2>
+            <p class="text-sm text-slate-500 mt-1">Manage your financial structure</p>
+        </div>
+        <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm">
+            <button (click)="openCreateModal()" class="bg-blue-600 hover:bg-blue-700 ..."></button>
+            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create Account
+        </button>
     </div>
 
-    <div *ngIf="isLoading" class="text-slate-500 py-4">
-        Loading your accounts...
-    </div>
+    <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse">
+            
+            <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider sticky top-0 z-10">
+                <tr>
+                    <th class="px-6 py-4 border-b border-slate-200 w-32">Code</th>
+                    <th class="px-6 py-4 border-b border-slate-200">Account Name</th>
+                    <th class="px-6 py-4 border-b border-slate-200 w-32 text-center">Type</th>
+                    <th class="px-6 py-4 border-b border-slate-200 w-24 text-right">Actions</th>
+                </tr>
+            </thead>
 
-    <ul *ngIf="!isLoading" class="space-y-2">
-        <li *ngFor="let group of groups" class="p-4 bg-slate-50 rounded border border-slate-200 flex justify-between items-center">
+            <tbody class="divide-y divide-slate-100 text-sm">
+                
+                <tr *ngIf="isLoading">
+                    <td colspan="4" class="px-6 py-12 text-center text-slate-400 animate-pulse">
+                        Loading your accounts...
+                    </td>
+                </tr>
+
+                <ng-container *ngIf="!isLoading">
+                    <ng-container *ngFor="let group of groups">
+                        
+                        <tr class="bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-200">
+                            <td class="px-6 py-4 font-bold text-slate-700">{{ group.code }}</td>
+                            <td class="px-6 py-4 font-bold text-slate-800">{{ group.name }}</td>
+                            <td class="px-6 py-4 text-center">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-200 text-slate-600 border border-slate-300">
+                                    Group
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right"></td>
+                        </tr>
+
+                        <tr *ngFor="let child of group.children" class="hover:bg-blue-50 transition-colors group/row">
+                            <td class="px-6 py-3 text-slate-500 pl-10 border-l-4 border-transparent hover:border-blue-500 font-mono">
+                                {{ child.code }}
+                            </td>
+                            <td class="px-6 py-3 font-medium text-slate-600 pl-10">
+                                {{ child.name }}
+                            </td>
+                            <td class="px-6 py-3 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-600 border border-blue-100">
+                                    Ledger
+                                </span>
+                            </td>
+                            <td class="px-6 py-3 text-right opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                <button class="text-slate-400 hover:text-blue-600 font-bold text-xs uppercase tracking-wider">Edit</button>
+                            </td>
+                        </tr>
+
+                        <tr *ngIf="!group.children || group.children.length === 0">
+                            <td colspan="4" class="px-6 py-2 text-xs text-slate-300 italic pl-10">
+                                No accounts in {{ group.name }} yet.
+                            </td>
+                        </tr>
+
+                    </ng-container>
+                </ng-container>
+
+            </tbody>
+        </table>
+    </div>
+</div>
+<div *ngIf="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+        
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">New Account</h3>
+            <button (click)="closeModal()" class="text-slate-400 hover:text-red-500">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-4">
             
             <div>
-                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded mr-3">
-                    {{ group.code }}
-                </span>
-                <span class="font-bold text-slate-700">{{ group.name }}</span>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Parent Group</label>
+                <select [(ngModel)]="newAccount.parent_id" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+                    <option value="" disabled selected>Select a group...</option>
+                    <option *ngFor="let group of groups" [value]="group.id">{{ group.code }} - {{ group.name }}</option>
+                </select>
             </div>
 
-            <span class="text-xs text-slate-500 uppercase tracking-wider font-semibold">
-                Group
-            </span>
-        </li>
-    </ul>
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Account Name</label>
+                <input [(ngModel)]="newAccount.name" type="text" placeholder="e.g. Petty Cash" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+            </div>
 
-    <div *ngIf="!isLoading && groups.length === 0" class="text-red-500 py-4">
-        No accounts found.
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Account Code</label>
+                <input [(ngModel)]="newAccount.code" type="text" placeholder="e.g. 1010" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+            </div>
+
+        </div>
+
+        <div class="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
+            <button (click)="closeModal()" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">Cancel</button>
+            <button (click)="createAccount()" [disabled]="isSaving" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-all flex items-center">
+                <span *ngIf="isSaving">Saving...</span>
+                <span *ngIf="!isSaving">Create Account</span>
+            </button>
+        </div>
+
     </div>
 </div>

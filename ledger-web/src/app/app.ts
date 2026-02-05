@@ -1,30 +1,24 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
-// 👇 1. Import your Auth Service (adjust path if needed, e.g. './services/auth')
-import { AuthService } from './services/auth'; 
+import { RouterOutlet, Router } from '@angular/router'; // Removed RouterLink/Active
+
+// 👇 1. Import the Sidebar so we can use <app-sidebar>
+import { SidebarComponent } from './components/sidebar/sidebar'; 
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule, 
+    RouterOutlet, 
+    SidebarComponent // 👈 2. Register it here
+  ],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
 export class AppComponent {
   title = 'ledger-web';
 
-  // 👇 2. Inject Auth Service in the constructor
-  constructor(public router: Router, private auth: AuthService) {}
-
-  // 👇 3. Add this function to read the name we saved
-  getUserName(): string {
-    return localStorage.getItem('user_name') || 'Accountant';
-  }
-
-  // 👇 4. Add this function to handle the click
-  onLogout() {
-    this.auth.logout();
-    this.router.navigate(['/login']);
-  }
+  // We only need the router here to check if we are on Login/Register page
+  constructor(public router: Router) {} 
 }
