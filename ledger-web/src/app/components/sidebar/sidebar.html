@@ -1,55 +1,93 @@
-<aside class="bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20 transition-all duration-300 relative h-full"
-       [class.w-64]="!isCollapsed"
-       [class.w-20]="isCollapsed">
+<div [class.w-64]="isExpanded" [class.w-20]="!isExpanded" 
+     class="h-screen bg-white border-r border-slate-200 transition-all duration-300 flex flex-col relative shadow-sm">
 
-    <div (click)="toggleSidebar()" 
-         class="h-16 flex items-center justify-center border-b border-slate-800 bg-slate-950 overflow-hidden cursor-pointer hover:bg-slate-800 transition-colors group">
-        
-        <img *ngIf="!isCollapsed" 
-             src="expanded.svg" 
-             alt="ZuLedger" 
-             class="h-10 w-auto transition-transform duration-300 group-hover:scale-105">
-        
-        <img *ngIf="isCollapsed" 
-             src="small.svg" 
-             alt="Z" 
-             class="h-8 w-8 transition-transform duration-300 group-hover:scale-110">
-    </div>
+    <button (click)="toggleSidebar()" 
+            class="absolute -right-3 top-9 bg-white border border-slate-200 rounded-full p-1 shadow-sm hover:bg-green-50 hover:text-green-600 z-50 text-slate-500 transition-colors">
+        <svg *ngIf="isExpanded" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        <svg *ngIf="!isExpanded" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </button>
 
-    <nav class="px-3 pt-10 space-y-3">
-        
-        <a routerLink="/dashboard" routerLinkActive="bg-blue-600 text-white shadow-lg" 
-           class="flex items-center px-3 py-3 rounded-lg transition-all hover:bg-slate-800 cursor-pointer group overflow-hidden whitespace-nowrap">
-            <svg class="w-6 h-6 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-            </svg>
-            <span *ngIf="!isCollapsed" class="font-medium ml-3 fade-in">Dashboard</span>
-        </a>
-
-        <a routerLink="/accounts" routerLinkActive="bg-blue-600 text-white shadow-lg" 
-           class="flex items-center px-3 py-3 rounded-lg transition-all hover:bg-slate-800 cursor-pointer group overflow-hidden whitespace-nowrap">
-            <svg class="w-6 h-6 flex-shrink-0 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span *ngIf="!isCollapsed" class="font-medium ml-3 fade-in">Chart of Accounts</span>
-        </a>
-
-    </nav>
-
-    <div class="mt-auto"></div>
-
-    <div class="p-4 border-t border-slate-800 bg-slate-950 overflow-hidden">
-        <div class="group relative w-full p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer flex items-center" (click)="onLogout()">
-            
-            <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-white font-bold">
-                {{ getUserName().charAt(0) }}
+    <div class="h-20 flex items-center px-6 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-black flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span class="text-green-500 font-bold text-xl">Z</span>
             </div>
-
-            <div *ngIf="!isCollapsed" class="ml-3 fade-in">
-                <p class="text-sm font-bold text-white">{{ getUserName() }}</p>
-                <p class="text-xs text-slate-500">Accountant</p>
+            <div *ngIf="isExpanded" class="font-bold text-xl tracking-tight cursor-default">
+                <span class="text-black">Zu</span><span class="text-green-600">Ledger</span>
             </div>
         </div>
     </div>
 
-</aside>
+    <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        
+        <a routerLink="/dashboard" routerLinkActive="bg-green-50" 
+           class="flex items-center gap-4 px-4 py-3 rounded-xl transition-all group hover:bg-green-50">
+            
+            <svg class="w-6 h-6 flex-shrink-0 text-slate-400 group-hover:text-green-600 transition-colors" 
+                 [class.text-green-600]="router.isActive('/dashboard', true)"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            
+            <span *ngIf="isExpanded" 
+                  class="text-slate-600 group-hover:text-slate-900 transition-colors"
+                  [class.font-bold]="router.isActive('/dashboard', true)"
+                  [class.text-slate-900]="router.isActive('/dashboard', true)">
+                Dashboard
+            </span>
+        </a>
+
+        <a routerLink="/accounts" routerLinkActive="bg-green-50"
+           class="flex items-center gap-4 px-4 py-3 rounded-xl transition-all group hover:bg-green-50">
+            
+            <svg class="w-6 h-6 flex-shrink-0 text-slate-400 group-hover:text-green-600 transition-colors" 
+                 [class.text-green-600]="router.isActive('/accounts', false)"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            
+            <span *ngIf="isExpanded" 
+                  class="text-slate-600 group-hover:text-slate-900 transition-colors"
+                  [class.font-bold]="router.isActive('/accounts', false)"
+                  [class.text-slate-900]="router.isActive('/accounts', false)">
+                Chart of Accounts
+            </span>
+        </a>
+
+    </nav>
+
+    <div class="p-4 border-t border-slate-100">
+        
+        <div class="relative group">
+            
+            <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-green-50 cursor-pointer transition-colors border border-transparent hover:border-green-100">
+                
+                <div class="w-10 h-10 rounded-full bg-black text-green-400 flex items-center justify-center font-bold flex-shrink-0 shadow-sm">
+                    {{ userName.charAt(0) }}
+                </div>
+                
+                <div *ngIf="isExpanded" class="overflow-hidden">
+                    <p class="text-sm font-bold text-slate-800 truncate group-hover:text-green-900">{{ userName }}</p>
+                    <p class="text-xs text-slate-500 truncate group-hover:text-green-700">{{ userEmail }}</p>
+                </div>
+
+                <svg *ngIf="isExpanded" class="w-4 h-4 ml-auto text-slate-400 group-hover:text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+            </div>
+
+            <div class="absolute bottom-full left-0 w-full mb-2 hidden group-hover:block z-50">
+                <div class="bg-white border border-slate-200 rounded-xl shadow-xl p-1 overflow-hidden">
+                    <button (click)="logout()" class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span *ngIf="isExpanded">Log Out</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
