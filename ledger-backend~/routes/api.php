@@ -16,5 +16,5 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/groups', [GroupController::class, 'index']);
     Route::post('/groups', [GroupController::class, 'store']);
     Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);
-
+    Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
 });
