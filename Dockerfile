@@ -20,7 +20,9 @@ WORKDIR /var/www/html
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-COPY ledger-backend* /var/www/html/
+COPY . /var/www/html
+
+RUN cp -r ledger-backend*/* . || true
 
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
@@ -32,3 +34,5 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --ignore-platfo
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 EXPOSE 80
+
+CMD bash -c "php artisan optimize:clear && php artisan migrate --force && apache2-foreground"
