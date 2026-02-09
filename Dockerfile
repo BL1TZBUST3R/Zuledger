@@ -35,4 +35,4 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 EXPOSE 80
 
-CMD bash -c "php artisan optimize:clear && php artisan migrate --force && apache2-foreground"
+CMD bash -c "php artisan migrate --force && php artisan optimize:clear && apache2-foreground"
