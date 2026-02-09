@@ -1,35 +1,46 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 
 @Component({
   selector: 'app-sidebar',
-  standalone: true, // 👈 THIS WAS MISSING OR SET TO FALSE
+  standalone: true,
   imports: [CommonModule, RouterModule],
   templateUrl: './sidebar.html',
-  // styleUrl: './sidebar.css' // Uncomment this if you have a css file
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   
-  isCollapsed = false;
+  // ✅ 1. Define the variables the HTML is looking for
+  isExpanded = true;
+  userName = 'User';
+  userEmail = '';
 
-  constructor(private router: Router) {}
+  // ✅ 2. Change 'private' to 'public' so the HTML can check routes
+  constructor(public router: Router) {} 
 
-  toggleSidebar() {
-    this.isCollapsed = !this.isCollapsed;
-  }
-
-  getUserName(): string {
-    // Check if running in browser to avoid errors during build
-    if (typeof localStorage !== 'undefined') {
-        const user = localStorage.getItem('user'); 
-        return user ? JSON.parse(user).name : 'Accountant';
+  ngOnInit() {
+    // ✅ 3. Load user data on startup
+    const userString = localStorage.getItem('user');
+    
+    if (userString) {
+      try {
+        const user = JSON.parse(userString);
+        this.userName = user.name || 'Accountant';
+        this.userEmail = user.email || '';
+      } catch (e) {
+        console.error('Error parsing user data', e);
+      }
     }
-    return 'Accountant';
   }
 
-  onLogout() {
-    localStorage.removeItem('auth_token');
+  // ✅ 4. Define the toggle function
+  toggleSidebar() {
+    this.isExpanded = !this.isExpanded;
+  }
+
+  // ✅ 5. Define the logout function
+  logout() {
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.router.navigate(['/login']);
   }
