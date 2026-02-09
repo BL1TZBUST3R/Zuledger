@@ -1,4 +1,4 @@
-FROM php:8.2-apache
+FROM php:8.3-apache
 
 
 RUN apt-get update && apt-get install -y \
@@ -31,8 +31,7 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.
 
 
 
-RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs
-
+RUN composer install --no-dev --optimize-autoloader --ignore-platform-reqs --no-scripts
 
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
