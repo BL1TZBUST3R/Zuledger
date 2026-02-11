@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
-
-// 👇 CRITICAL FIX: We import from './auth' because your file is named auth.ts
 import { AuthService } from '../../services/auth'; 
 
 @Component({
@@ -12,7 +10,7 @@ import { AuthService } from '../../services/auth';
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, HttpClientModule],
   templateUrl: './register.html',
-  styleUrl: './register.css'
+  styleUrl: './register.css' // Make sure you have this file, or remove this line
 })
 export class RegisterComponent {
   
@@ -23,22 +21,48 @@ export class RegisterComponent {
     password_confirmation: ''
   };
 
+  // Variables for the Eye Icons
+  showPassword = false;
+  showConfirmPassword = false;
+
   constructor(private authService: AuthService, private router: Router) {}
 
+  // Helper to toggle visibility
+  toggleVisibility(field: 'password' | 'confirm') {
+    if (field === 'password') {
+      this.showPassword = !this.showPassword;
+    } else {
+      this.showConfirmPassword = !this.showConfirmPassword;
+    }
+  }
+
+  // Real-time check: Do they match?
+  get passwordsMatch(): boolean {
+    return this.user.password === this.user.password_confirmation;
+  }
+
+  // Real-time check: Is the form ready?
+  get isFormValid(): boolean {
+    return (
+      this.user.name.length > 0 &&
+      this.user.email.length > 0 &&
+      this.user.password.length > 0 &&
+      this.passwordsMatch
+    );
+  }
+
   onRegister() {
-    if (this.user.password !== this.user.password_confirmation) {
+    if (!this.passwordsMatch) {
       alert('Passwords do not match!');
       return;
     }
 
     this.authService.register(this.user).subscribe({
       next: (response: any) => {
-        console.log('Success:', response);
         alert('Account Created! Redirecting to login...');
         this.router.navigate(['/login']);
       },
       error: (error: any) => {
-        console.error('Error:', error);
         alert('Registration Failed: ' + (error.error?.message || 'Server Error'));
       }
     });
