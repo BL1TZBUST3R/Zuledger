@@ -21,11 +21,11 @@ export class RegisterComponent {
     password_confirmation: ''
   };
 
-  // Track password visibility
-  showPassword = false;
-  showConfirmPassword = false;
+// Track password visibility
+showPassword = false;
+showConfirmPassword = false;
 
-  constructor(private authService: AuthService, private router: Router) {}
+constructor(private authService: AuthService, private router: Router) {}
 
   // Signal for password mismatch
   get passwordsMatch(): boolean {
