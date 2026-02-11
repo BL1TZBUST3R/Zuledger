@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService } from '../../services/auth'; // Using standardised service
+import { AuthService } from '../../services/auth'; 
 
 @Component({
   selector: 'app-login',
@@ -14,11 +14,11 @@ export class LoginComponent {
   loginForm: FormGroup;
   isLoading = false;
   errorMessage = '';
-  showPassword = false; // Tracks visibility
+  showPassword = false;
 
   constructor(
     private fb: FormBuilder,
-    private authService: AuthService, // Using service for correct URL
+    private authService: AuthService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -34,13 +34,17 @@ export class LoginComponent {
     this.errorMessage = '';
 
     this.authService.login(this.loginForm.value).subscribe({
-        next: (response) => {
-          console.log('Login Success:', response);
+        next: (response: any) => {
+          // 1. Save Token
           localStorage.setItem('token', response.token);
-          this.router.navigate(['/accounts']);
+          
+          // 2. Save User Info (This is what the Sidebar reads!)
+          localStorage.setItem('user', JSON.stringify(response.user));
+
+          // 3. Navigate
+          this.router.navigate(['/accounts']); 
         },
         error: (error) => {
-          console.error('Login Failed:', error);
           this.errorMessage = 'Invalid email or password';
           this.isLoading = false;
         }

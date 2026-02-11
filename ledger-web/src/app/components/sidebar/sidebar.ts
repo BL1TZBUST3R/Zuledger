@@ -10,20 +10,19 @@ import { RouterModule, Router } from '@angular/router';
 })
 export class SidebarComponent implements OnInit {
   
-  // ✅ 1. Define the variables the HTML is looking for
   isExpanded = true;
   userName = 'User';
   userEmail = '';
 
-  // ✅ 2. Change 'private' to 'public' so the HTML can check routes
   constructor(public router: Router) {} 
 
   ngOnInit() {
-    // ✅ 3. Load user data on startup
+    // 1. Get the raw string from storage
     const userString = localStorage.getItem('user');
     
     if (userString) {
       try {
+        // 2. Parse it back into an object
         const user = JSON.parse(userString);
         this.userName = user.name || 'Accountant';
         this.userEmail = user.email || '';
@@ -33,12 +32,10 @@ export class SidebarComponent implements OnInit {
     }
   }
 
-  // ✅ 4. Define the toggle function
   toggleSidebar() {
     this.isExpanded = !this.isExpanded;
   }
 
-  // ✅ 5. Define the logout function
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

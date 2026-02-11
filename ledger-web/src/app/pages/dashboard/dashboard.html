@@ -3,19 +3,46 @@
     <p class="text-slate-500">Welcome back to ZuLedger</p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div *ngIf="isLoading" class="p-10 text-center text-slate-400 animate-pulse">
+    Loading your financial data...
+</div>
+
+<div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Assets</div>
-        <div class="mt-2 text-3xl font-bold text-slate-900">$10,250.00</div>
+        <div class="mt-2 text-3xl font-bold text-slate-900">
+            {{ stats.total_assets | currency:'USD':'symbol':'1.2-2' }}
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Based on code 1xxx</p>
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Liabilities</div>
-        <div class="mt-2 text-3xl font-bold text-slate-900">$4,100.00</div>
+        <div class="mt-2 text-3xl font-bold text-slate-900">
+            {{ stats.total_liabilities | currency:'USD':'symbol':'1.2-2' }}
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Based on code 2xxx</p>
     </div>
 
     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Net Income</div>
-        <div class="mt-2 text-3xl font-bold text-emerald-600">$6,150.00</div>
+        <div class="mt-2 text-3xl font-bold" 
+             [class.text-emerald-600]="stats.net_income >= 0"
+             [class.text-red-600]="stats.net_income < 0">
+            {{ stats.net_income | currency:'USD':'symbol':'1.2-2' }}
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Income (3xxx) - Expenses (4xxx)</p>
+    </div>
+
+    <div class="md:col-span-3 grid grid-cols-2 gap-6 mt-4">
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <span class="block text-2xl font-bold text-slate-700">{{ stats.account_stats.main_groups }}</span>
+            <span class="text-sm text-slate-500">Main Account Groups</span>
+        </div>
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <span class="block text-2xl font-bold text-slate-700">{{ stats.account_stats.sub_accounts }}</span>
+            <span class="text-sm text-slate-500">Active Sub-Accounts</span>
+        </div>
     </div>
 </div>
