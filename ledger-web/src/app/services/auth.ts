@@ -7,7 +7,8 @@ import { Observable } from 'rxjs';
 })
 export class AuthService {
 
-  private apiUrl = 'http://127.0.0.1:8000/api';
+  // Standardised to your Render backend URL
+  private apiUrl = 'https://zuledger.onrender.com/api';
 
   constructor(private http: HttpClient) { }
 
@@ -19,9 +20,8 @@ export class AuthService {
     return this.http.post(`${this.apiUrl}/login`, credentials);
   }
 
-  // 👇 THIS IS THE MISSING PIECE
   logout(): void {
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('token'); 
     localStorage.removeItem('user_name');
   }
 }
