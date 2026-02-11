@@ -7,11 +7,10 @@ import { DashboardService } from '../../services/dashboard.service';
   standalone: true,
   imports: [CommonModule], 
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.css',
 })
 export class DashboardComponent implements OnInit {
   
-  stats = {
+  stats: any = {
     total_assets: 0,
     total_liabilities: 0,
     net_income: 0,
@@ -23,11 +22,13 @@ export class DashboardComponent implements OnInit {
 
   ngOnInit() {
     this.dashboardService.getStats().subscribe({
-      next: (data) => {
+      // ✅ Added : any to fix TS7006
+      next: (data: any) => {
         this.stats = data;
         this.isLoading = false;
       },
-      error: (err) => {
+      // ✅ Added : any to fix TS7006
+      error: (err: any) => {
         console.error(err);
         this.isLoading = false;
       }
