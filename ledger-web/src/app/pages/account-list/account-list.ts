@@ -2,7 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms'; // 👈 IMPORT THIS!
+import { FormsModule } from '@angular/forms';
 
 interface Group {
   id: number;
@@ -14,17 +14,19 @@ interface Group {
 @Component({
   selector: 'app-account-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule], // 👈 ADD IT HERE TOO
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './account-list.html',
 })
 export class AccountListComponent implements OnInit {
   
   groups: Group[] = [];
   isLoading: boolean = true;
-  showModal: boolean = false; // Controls the popup visibility
+  showModal: boolean = false;
   isSaving: boolean = false;
 
-  // The form data
+  // Updated to your Render backend URL
+  private apiUrl = 'https://zuledger.onrender.com/api/groups';
+
   newAccount = {
     parent_id: '',
     name: '',
@@ -38,7 +40,7 @@ export class AccountListComponent implements OnInit {
   }
 
   fetchGroups() {
-    this.http.get<Group[]>('http://localhost:8000/api/groups')
+    this.http.get<Group[]>(this.apiUrl)
       .subscribe({
         next: (data) => {
           this.groups = data;
@@ -48,28 +50,42 @@ export class AccountListComponent implements OnInit {
       });
   }
 
-  // 👇 OPEN THE POPUP
+  // ✅ AUTOMATION LOGIC: Sugggests the next available code
+  onParentChange() {
+    const parentId = Number(this.newAccount.parent_id);
+    const selectedParent = this.groups.find(g => g.id === parentId);
+
+    if (selectedParent) {
+      if (selectedParent.children && selectedParent.children.length > 0) {
+        // If accounts exist in this group, find the highest code and add 1
+        const existingCodes = selectedParent.children.map(c => parseInt(c.code)).filter(code => !isNaN(code));
+        const maxCode = Math.max(...existingCodes);
+        this.newAccount.code = (maxCode + 1).toString();
+      } else {
+        // If this is the first account, take parent code (e.g., 1000) and add 1
+        const baseCode = parseInt(selectedParent.code);
+        this.newAccount.code = (baseCode + 1).toString();
+      }
+    }
+  }
+
   openCreateModal() {
     this.showModal = true;
-    // Reset form
     this.newAccount = { parent_id: '', name: '', code: '' };
   }
 
-  // 👇 CLOSE THE POPUP
   closeModal() {
     this.showModal = false;
   }
 
-  // 👇 SEND DATA TO BACKEND
   createAccount() {
     if (!this.newAccount.parent_id || !this.newAccount.name || !this.newAccount.code) return;
 
     this.isSaving = true;
 
-    this.http.post('http://localhost:8000/api/groups', this.newAccount)
+    this.http.post(this.apiUrl, this.newAccount)
       .subscribe({
         next: () => {
-          // Success! Reload the list and close modal
           this.fetchGroups(); 
           this.closeModal();
           this.isSaving = false;
