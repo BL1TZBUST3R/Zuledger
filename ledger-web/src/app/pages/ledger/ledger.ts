@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { LedgerService } from '../../services/ledger.service'; // 👈 Switch to Service
+import { LedgerService } from '../../services/ledger.service';
 
 @Component({
   selector: 'app-ledger',
@@ -11,11 +11,12 @@ import { LedgerService } from '../../services/ledger.service'; // 👈 Switch to
 })
 export class LedgerComponent implements OnInit {
   
-  ledger: any = null;
+  // 👇 FIX: Renamed from 'ledger' to 'account' to match your HTML
+  account: any = null; 
   entries: any[] = [];
   balance: number = 0;
   
-  // 🔒 Permission Flag
+  // Permission Flags
   canEdit: boolean = false; 
   isLoading = true;
 
@@ -34,20 +35,22 @@ export class LedgerComponent implements OnInit {
   fetchLedger(id: string) {
     this.ledgerService.getLedger(id).subscribe({
       next: (data) => {
-        this.ledger = data.account; // Or data.ledger depending on your Controller response
+        // 👇 FIX: Assign data to 'this.account'
+        this.account = data.account; 
         this.entries = data.entries;
         this.balance = data.current_balance;
 
-        // 👇 PERMISSION LOGIC
-        // Check if I am the owner OR if my pivot role is 'editor'
-        const isOwner = data.is_owner; // (Make sure to send this from backend)
-        const role = data.permission_level; // (From pivot)
+        // Permissions
+        const isOwner = data.is_owner;
+        const role = data.permission_level;
         
         this.canEdit = isOwner || role === 'editor';
-        
         this.isLoading = false;
       },
-      error: (err) => console.error('Access Denied', err)
+      error: (err) => {
+        console.error('Access Denied', err);
+        this.isLoading = false;
+      }
     });
   }
 }
