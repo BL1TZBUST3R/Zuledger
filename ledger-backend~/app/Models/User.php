@@ -12,6 +12,17 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    public function ledgers()
+{
+    // Ledgers this user has been authorized to use
+    return $this->belongsToMany(Ledger::class)->withPivot('permission_level');
+}
+
+public function ownedLedgers()
+{
+    // Ledgers this user created
+    return $this->hasMany(Ledger::class, 'owner_id');
+}
     // 👇 2. ADD 'HasApiTokens' TO THIS LIST
     use HasApiTokens, HasFactory, Notifiable;
 
