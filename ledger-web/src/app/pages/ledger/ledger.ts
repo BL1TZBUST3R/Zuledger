@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { LedgerService } from '../../services/ledger.service'; // 👈 Switch to Service
 
 @Component({
   selector: 'app-ledger',
@@ -11,35 +11,43 @@ import { HttpClient } from '@angular/common/http';
 })
 export class LedgerComponent implements OnInit {
   
-  account: any = null;
+  ledger: any = null;
   entries: any[] = [];
   balance: number = 0;
+  
+  // 🔒 Permission Flag
+  canEdit: boolean = false; 
   isLoading = true;
 
   constructor(
     private route: ActivatedRoute,
-    private http: HttpClient
+    private ledgerService: LedgerService
   ) {}
 
   ngOnInit() {
-    // 1. Get the ID from the URL (e.g. /ledger/5)
-    const accountId = this.route.snapshot.paramMap.get('id');
-    
-    if (accountId) {
-      this.fetchLedger(accountId);
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.fetchLedger(id);
     }
   }
 
   fetchLedger(id: string) {
-    this.http.get<any>(`http://localhost:8000/api/accounts/${id}/ledger`)
-      .subscribe({
-        next: (data) => {
-          this.account = data.account;
-          this.entries = data.entries;
-          this.balance = data.current_balance;
-          this.isLoading = false;
-        },
-        error: (err) => console.error(err)
-      });
+    this.ledgerService.getLedger(id).subscribe({
+      next: (data) => {
+        this.ledger = data.account; // Or data.ledger depending on your Controller response
+        this.entries = data.entries;
+        this.balance = data.current_balance;
+
+        // 👇 PERMISSION LOGIC
+        // Check if I am the owner OR if my pivot role is 'editor'
+        const isOwner = data.is_owner; // (Make sure to send this from backend)
+        const role = data.permission_level; // (From pivot)
+        
+        this.canEdit = isOwner || role === 'editor';
+        
+        this.isLoading = false;
+      },
+      error: (err) => console.error('Access Denied', err)
+    });
   }
 }

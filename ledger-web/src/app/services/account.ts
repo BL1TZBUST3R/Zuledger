@@ -7,11 +7,12 @@ import { Observable } from 'rxjs';
 })
 export class AccountService {
 
-  private apiUrl = 'http://127.0.0.1:8000/api';
+  // ⚠️ Change to http://localhost:8000/api if testing locally
+  private apiUrl = 'https://zuledger.onrender.com/api'; 
 
   constructor(private http: HttpClient) { }
 
-  // Helper to attach the "Key" (Token) to every request
+  // Helper to manually attach the token (if not using an Interceptor)
   private getHeaders() {
     const token = localStorage.getItem('auth_token');
     return {
@@ -21,8 +22,15 @@ export class AccountService {
     };
   }
 
-  // 1. Get all Groups (Assets, Liabilities, etc.)
-  getGroups(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/groups`, this.getHeaders());
+  // 1. Get Groups for a specific Ledger
+  // GET /api/ledgers/{id}/groups
+  getGroups(ledgerId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/ledgers/${ledgerId}/groups`, this.getHeaders());
+  }
+
+  // 2. Create a Group inside a specific Ledger
+  // POST /api/ledgers/{id}/groups
+  createGroup(ledgerId: string, data: any): Observable<any> {
+    return this.http.post(`${this.apiUrl}/ledgers/${ledgerId}/groups`, data, this.getHeaders());
   }
 }

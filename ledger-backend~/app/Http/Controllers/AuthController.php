@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Database\Seeders\GroupSeeder; // 👈 1. ADD THIS IMPORT
+use Database\Seeders\GroupSeeder;
 
 class AuthController extends Controller
 {

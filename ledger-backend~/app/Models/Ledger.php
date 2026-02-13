@@ -11,14 +11,11 @@ class Ledger extends Model
 
     protected $fillable = ['name', 'owner_id'];
 
-    // Relationship: A ledger belongs to an Owner
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    // Relationship: A ledger has many Authorized Users (Many-to-Many)
-    // This is the pivot table 'ledger_user' we discussed
     public function authorizedUsers()
     {
         return $this->belongsToMany(User::class, 'ledger_user')
@@ -26,17 +23,11 @@ class Ledger extends Model
                     ->withTimestamps();
     }
 
-    // Relationship: A ledger has many Groups (Accounts)
-    // This allows $group->ledger to work in your Controller
     public function groups()
     {
         return $this->hasMany(Group::class);
     }
 
-    /**
-     * Scope: Filter ledgers for a specific user (Owned OR Invited)
-     * usage: Ledger::forUser(Auth::user())->get();
-     */
     public function scopeForUser($query, $user)
     {
         return $query->where('owner_id', $user->id)

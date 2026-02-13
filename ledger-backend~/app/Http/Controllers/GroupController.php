@@ -5,35 +5,50 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Group;
+use App\Models\Ledger;
 
 class GroupController extends Controller
 {
-    // 👇 This function fetches the list
-    public function index()
+    public function index($ledgerId)
     {
-        // 1. Get the currently logged-in user
-        $user = Auth::user();
+        $ledger = Ledger::findOrFail($ledgerId);
 
-        // 2. Return ONLY their groups (with children accounts)
-        //    We use 'with('children')' to get the sub-accounts too.
-        return Group::where('user_id', $user->id)
-                    ->whereNull('parent_id') // Only get top-level groups (Assets, Liabilities...)
+        $this->authorize('view', $ledger);
+
+
+        return Group::where('ledger_id', $ledgerId)
+                    ->whereNull('parent_id')
                     ->with('children') 
+                    ->orderBy('code', 'asc')
                     ->get();
     }
 
-    // 👇 This function creates a new group
-   public function store(Request $request)
+  
+    public function store(Request $request, $ledgerId)
     {
+        $ledger = Ledger::findOrFail($ledgerId);
+
+        // 🛡️ Security: Only owners or editors can add accounts
+        $this->authorize('update', $ledger);
+
         $request->validate([
             'name' => 'required|string',
             'code' => 'required|string',
-            'parent_id' => 'required|exists:groups,id' // 👈 We force it to have a parent
+            'parent_id' => 'nullable|exists:groups,id'
         ]);
 
+        // Validation: Ensure parent belongs to the SAME ledger
+        if ($request->parent_id) {
+            $parent = Group::find($request->parent_id);
+            if ($parent->ledger_id != $ledgerId) {
+                return response()->json(['message' => 'Parent account must belong to the same ledger'], 422);
+            }
+        }
+
         $group = Group::create([
-            'user_id' => Auth::id(),
-            'parent_id' => $request->parent_id, // Save the relationship
+            'user_id' => Auth::id(),   // Who created it (Audit trail)
+            'ledger_id' => $ledgerId,  // 👈 IMPORTANT: Link to the specific ledger
+            'parent_id' => $request->parent_id,
             'name' => $request->name,
             'code' => $request->code,
             'affects_gross' => 0, 

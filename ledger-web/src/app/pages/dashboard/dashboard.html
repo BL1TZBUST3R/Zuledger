@@ -7,42 +7,80 @@
     Loading your financial data...
 </div>
 
-<div *ngIf="!isLoading" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div *ngIf="!isLoading">
     
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Assets</div>
-        <div class="mt-2 text-3xl font-bold text-slate-900">
-            {{ stats.total_assets | currency:'USD':'symbol':'1.2-2' }}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Assets</div>
+            <div class="mt-2 text-3xl font-bold text-slate-900">
+                {{ stats.total_assets | currency:'USD':'symbol':'1.2-2' }}
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Based on code 1xxx</p>
         </div>
-        <p class="text-xs text-slate-400 mt-2">Based on code 1xxx</p>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Liabilities</div>
+            <div class="mt-2 text-3xl font-bold text-slate-900">
+                {{ stats.total_liabilities | currency:'USD':'symbol':'1.2-2' }}
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Based on code 2xxx</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Net Income</div>
+            <div class="mt-2 text-3xl font-bold" 
+                 [class.text-emerald-600]="stats.net_income >= 0"
+                 [class.text-red-600]="stats.net_income < 0">
+                {{ stats.net_income | currency:'USD':'symbol':'1.2-2' }}
+            </div>
+            <p class="text-xs text-slate-400 mt-2">Income (3xxx) - Expenses (4xxx)</p>
+        </div>
     </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Liabilities</div>
-        <div class="mt-2 text-3xl font-bold text-slate-900">
-            {{ stats.total_liabilities | currency:'USD':'symbol':'1.2-2' }}
+    <div>
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-slate-800">My Ledgers</h2>
+            
+            <div class="flex gap-2">
+                <input type="text" [(ngModel)]="newLedgerName" placeholder="New Company Name" 
+                       class="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                <button (click)="createLedger()" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">
+                    + Create
+                </button>
+            </div>
         </div>
-        <p class="text-xs text-slate-400 mt-2">Based on code 2xxx</p>
-    </div>
 
-    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-        <div class="text-slate-500 text-sm font-medium uppercase tracking-wider">Net Income</div>
-        <div class="mt-2 text-3xl font-bold" 
-             [class.text-emerald-600]="stats.net_income >= 0"
-             [class.text-red-600]="stats.net_income < 0">
-            {{ stats.net_income | currency:'USD':'symbol':'1.2-2' }}
-        </div>
-        <p class="text-xs text-slate-400 mt-2">Income (3xxx) - Expenses (4xxx)</p>
-    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div *ngFor="let ledger of ledgers" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-xl font-bold text-slate-800 truncate">{{ ledger.name }}</h3>
+                        <span *ngIf="ledger.owner_id === 1" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Owner</span>
+                        <span *ngIf="ledger.owner_id !== 1" class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-bold">Guest</span>
+                    </div>
+                    <p class="text-slate-400 text-xs">Created: {{ ledger.created_at | date }}</p>
+                </div>
 
-    <div class="md:col-span-3 grid grid-cols-2 gap-6 mt-4">
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <span class="block text-2xl font-bold text-slate-700">{{ stats.account_stats.main_groups }}</span>
-            <span class="text-sm text-slate-500">Main Account Groups</span>
-        </div>
-        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <span class="block text-2xl font-bold text-slate-700">{{ stats.account_stats.sub_accounts }}</span>
-            <span class="text-sm text-slate-500">Active Sub-Accounts</span>
+                <div class="mt-6 pt-4 border-t border-slate-100">
+                    <div class="flex gap-2">
+                        <input type="email" [(ngModel)]="ledger.inviteEmail" placeholder="Invite email..." 
+                               class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:border-blue-400 transition">
+                        <button (click)="inviteUser(ledger)" class="text-blue-600 font-bold text-xs uppercase hover:underline">
+                            Invite
+                        </button>
+                    </div>
+                </div>
+                
+                <a [routerLink]="['/ledgers', ledger.id]" 
+                   class="block text-center mt-6 w-full py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition cursor-pointer no-underline">
+                    Open Ledger
+                </a>
+            </div>
+
+            <div *ngIf="ledgers.length === 0" class="col-span-full text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
+                You don't have any ledgers yet. Create one above to get started!
+            </div>
         </div>
     </div>
 </div>
