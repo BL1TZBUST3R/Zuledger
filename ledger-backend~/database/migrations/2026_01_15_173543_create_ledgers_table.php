@@ -3,17 +3,16 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB; // 👈 Import DB Facade
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // 👇 THIS IS THE FIX:
-        // Forcefully delete the old "bad" table if it exists.
-        // We disable foreign keys first to prevent "Integrity Constraint" crashes.
-        Schema::disableForeignKeyConstraints();
-        Schema::dropIfExists('ledgers');
-        Schema::enableForeignKeyConstraints();
+        // 👇 NUCLEAR FIX:
+        // 'CASCADE' tells PostgreSQL to force-delete the table 
+        // and automatically remove any links (Foreign Keys) from other tables.
+        DB::statement('DROP TABLE IF EXISTS ledgers CASCADE');
 
         // Now create the correct "Company" table
         Schema::create('ledgers', function (Blueprint $table) {
@@ -26,6 +25,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('ledgers');
+        // We use CASCADE here too, just in case
+        DB::statement('DROP TABLE IF EXISTS ledgers CASCADE');
     }
 };
