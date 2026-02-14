@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule, Router, NavigationEnd, Event } from '@angular/router'; // 👈 Added NavigationEnd & Event
+import { filter } from 'rxjs/operators'; // 👈 Added filter
 
 @Component({
   selector: 'app-sidebar',
@@ -11,18 +12,46 @@ import { RouterModule, Router } from '@angular/router';
 export class SidebarComponent implements OnInit {
   
   isExpanded = true;
+  isMobile = false;       // 👈 Track mobile state
+  ledgerId: string | null = null; // 👈 Track active Ledger ID
+  
   userName = 'User';
   userEmail = '';
 
-  constructor(public router: Router) {} 
+  constructor(public router: Router) {
+    // 👇 SUBSCRIPTION: Listen for URL changes
+    // This ensures that if you switch ledgers, the sidebar links update immediately.
+    this.router.events.pipe(
+      filter((event: Event): event is NavigationEnd => event instanceof NavigationEnd)
+    ).subscribe(() => {
+      this.checkLedgerContext();
+    });
+  } 
 
   ngOnInit() {
-    // 1. Get the raw string from storage
-    const userString = localStorage.getItem('user');
+    this.loadUser();
+    this.checkScreenSize();
+    this.checkLedgerContext(); // Run check immediately on load
+  }
+
+  // 👇 LOGIC: Parse URL to find /ledgers/{id}
+  checkLedgerContext() {
+    const url = this.router.url;
+    // Regex to find the ID after 'ledgers/'
+    const match = url.match(/\/ledgers\/(\d+)/);
     
+    if (match) {
+      this.ledgerId = match[1];
+    } else {
+      // If we are on the Dashboard or Login, clear the ID
+      this.ledgerId = null; 
+    }
+  }
+
+  loadUser() {
+    const userString = localStorage.getItem('user');
     if (userString) {
       try {
-        // 2. Parse it back into an object
         const user = JSON.parse(userString);
         this.userName = user.name || 'Accountant';
         this.userEmail = user.email || '';
@@ -32,8 +61,35 @@ export class SidebarComponent implements OnInit {
     }
   }
 
+  // 👇 RESPONSIVE: Auto-collapse on mobile
+  @HostListener('window:resize', [])
+  onResize() {
+    this.checkScreenSize();
+  }
+
+  checkScreenSize() {
+    const wasMobile = this.isMobile;
+    this.isMobile = window.innerWidth < 768; // Tailwind 'md' breakpoint
+
+    // If we just switched TO mobile, collapse the sidebar
+    if (this.isMobile && !wasMobile) {
+        this.isExpanded = false;
+    }
+    // If we just switched TO desktop, expand it
+    if (!this.isMobile && wasMobile) {
+        this.isExpanded = true;
+    }
+  }
+
   toggleSidebar() {
     this.isExpanded = !this.isExpanded;
+  }
+
+  // Helper for HTML: Close sidebar when clicking a link on mobile
+  closeOnMobile() {
+    if (this.isMobile) {
+        this.isExpanded = false;
+    }
   }
 
   logout() {
