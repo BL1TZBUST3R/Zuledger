@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // 👈 Needed for inputs
-import { RouterModule } from '@angular/router'; // 👈 Needed for links to ledgers
+import { CommonModule } from '@angular/common'; 
+import { FormsModule } from '@angular/forms'; 
+import { RouterModule } from '@angular/router'; 
 import { DashboardService } from '../../services/dashboard.service';
-import { LedgerService } from '../../services/ledger.service'; // 👈 New Service
+import { LedgerService } from '../../services/ledger.service'; 
 
 @Component({
   selector: 'app-dashboard',
@@ -13,7 +13,6 @@ import { LedgerService } from '../../services/ledger.service'; // 👈 New Servi
 })
 export class DashboardComponent implements OnInit {
   
-  // Existing Stats
   stats: any = {
     total_assets: 0,
     total_liabilities: 0,
@@ -21,16 +20,13 @@ export class DashboardComponent implements OnInit {
     account_stats: { main_groups: 0, sub_accounts: 0 }
   };
 
-  // 🆕 Multi-Ledger State
   ledgers: any[] = [];
   newLedgerName: string = '';
-  inviteEmail: string = '';
-  
   isLoading = true;
 
   constructor(
     private dashboardService: DashboardService,
-    private ledgerService: LedgerService // 👈 Inject the service
+    private ledgerService: LedgerService
   ) {}
 
   ngOnInit() {
@@ -39,49 +35,68 @@ export class DashboardComponent implements OnInit {
 
   loadData() {
     this.isLoading = true;
-
-    // 1. Fetch Stats (Existing)
     this.dashboardService.getStats().subscribe({
       next: (data: any) => this.stats = data,
-      error: (err: any) => console.error('Stats error:', err)
+      error: (err: any) => console.error(err)
     });
 
-    // 2. Fetch Ledgers (New)
     this.ledgerService.getLedgers().subscribe({
       next: (data: any[]) => {
-        this.ledgers = data;
+        this.ledgers = data.map(l => ({...l, inviteEmail: ''}));
         this.isLoading = false;
       },
       error: (err: any) => {
-        console.error('Ledgers error:', err);
+        console.error(err);
         this.isLoading = false;
       }
     });
   }
 
-  // 🆕 Create a new Ledger (Company)
   createLedger() {
     if (!this.newLedgerName.trim()) return;
-
     this.ledgerService.createLedger(this.newLedgerName).subscribe({
       next: (newLedger) => {
-        this.ledgers.push(newLedger); // Update UI immediately
-        this.newLedgerName = ''; // Clear input
-        alert(`Ledger "${newLedger.name}" created!`);
+        this.ledgers.push({...newLedger, inviteEmail: ''}); 
+        this.newLedgerName = ''; 
       },
-      error: (err) => alert('Failed to create ledger: ' + (err.error?.message || err.message))
+      error: (err) => alert('Failed to create ledger')
     });
   }
 
-  // 🆕 Invite User logic (The "Authorize Other Accounts" feature)
   inviteUser(ledger: any) {
-    // We use a browser prompt for now to keep the UI simple without a custom modal
-    const email = prompt(`Enter email to invite to ${ledger.name}:`);
-    if (!email) return;
-
-    this.ledgerService.authorizeUser(ledger.id, email, 'editor').subscribe({
-      next: () => alert(`Invited ${email} successfully!`),
-      error: (err) => alert('Invite failed: ' + (err.error?.message || err.message))
+    if (!ledger.inviteEmail) return;
+    this.ledgerService.authorizeUser(ledger.id, ledger.inviteEmail, 'editor').subscribe({
+      next: () => {
+          alert(`Invited ${ledger.inviteEmail}!`);
+          ledger.inviteEmail = ''; 
+      },
+      error: (err) => alert('Invite failed')
     });
+  }
+
+  // 👇 NEW: Rename Logic
+  renameLedger(ledger: any) {
+    const newName = prompt("Enter new name for " + ledger.name, ledger.name);
+    if (newName && newName !== ledger.name) {
+        this.ledgerService.updateLedger(ledger.id, newName).subscribe({
+            next: () => {
+                ledger.name = newName; // Update UI
+            },
+            error: () => alert("Failed to rename ledger.")
+        });
+    }
+  }
+
+  // 👇 NEW: Delete Logic
+  deleteLedger(ledger: any) {
+    if (confirm(`⚠️ ARE YOU SURE?\n\nThis will delete "${ledger.name}" and ALL its accounts permanently.`)) {
+        this.ledgerService.deleteLedger(ledger.id).subscribe({
+            next: () => {
+                // Remove from list
+                this.ledgers = this.ledgers.filter(l => l.id !== ledger.id);
+            },
+            error: () => alert("Failed to delete ledger.")
+        });
+    }
   }
 }

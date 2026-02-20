@@ -6,26 +6,29 @@ use App\Http\Controllers\LedgerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Public Routes
+// Public
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Protected Routes
+// Protected
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     
-    // Ledger Management Routes
-    Route::get('/ledgers', [LedgerController::class, 'index']);      // List my ledgers
-    Route::post('/ledgers', [LedgerController::class, 'store']);     // Create new ledger
-    Route::get('/ledgers/{id}', [LedgerController::class, 'show']);  // View specific ledger
-    Route::post('/ledgers/{id}/authorize', [LedgerController::class, 'authorizeUser']); // Invite user
+    // Ledger Management
+    Route::get('/ledgers', [LedgerController::class, 'index']);
+    Route::post('/ledgers', [LedgerController::class, 'store']);
+    Route::get('/ledgers/{id}', [LedgerController::class, 'show']);
+    
+    // 👇 NEW ROUTES FOR RENAME/DELETE
+    Route::put('/ledgers/{id}', [LedgerController::class, 'update']); 
+    Route::delete('/ledgers/{id}', [LedgerController::class, 'destroy']); 
+    
+    Route::post('/ledgers/{id}/authorize', [LedgerController::class, 'authorizeUser']);
 
-    // 👇 NEW: Ledger-Specific Account Routes
-    // These allow fetching/creating accounts for a specific Company Ledger
+    // Accounts
     Route::get('/ledgers/{id}/groups', [GroupController::class, 'index']); 
     Route::post('/ledgers/{id}/groups', [GroupController::class, 'store']);
 
-    // Dashboard & Entries
+    // Dashboard
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
-    Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);
 });
