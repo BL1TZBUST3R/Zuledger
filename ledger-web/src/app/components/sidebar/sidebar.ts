@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd, Event } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import { LedgerService } from '../../services/ledger.service';
 export class SidebarComponent implements OnInit {
   
   isExpanded = true;
+  isMobile = false; // 👈 Restored mobile tracking
   userName = 'User';
   userEmail = '';
 
@@ -31,6 +32,8 @@ export class SidebarComponent implements OnInit {
   } 
 
   ngOnInit() {
+    this.checkScreenSize(); // 👈 Check screen size on load
+
     const userString = localStorage.getItem('user');
     
     if (userString) {
@@ -44,6 +47,25 @@ export class SidebarComponent implements OnInit {
     }
 
     this.checkLedgerContext();
+  }
+
+  // 👈 Restored: Listen for window resizing
+  @HostListener('window:resize', [])
+  onResize() {
+    this.checkScreenSize();
+  }
+
+  // 👈 Restored: Logic to auto-collapse/expand based on screen size
+  checkScreenSize() {
+    const wasMobile = this.isMobile;
+    this.isMobile = window.innerWidth < 768; // Tailwind 'md' breakpoint
+
+    if (this.isMobile && !wasMobile) {
+        this.isExpanded = false;
+    }
+    if (!this.isMobile && wasMobile) {
+        this.isExpanded = true;
+    }
   }
 
   checkLedgerContext() {
@@ -64,7 +86,6 @@ export class SidebarComponent implements OnInit {
 
   fetchLedgerName(id: string) {
       this.ledgerService.getCompanyInfo(id).subscribe({
-          // Notice the ": any" is already here to fix your TS error!
           next: (ledger: any) => {
               this.activeLedgerName = ledger.name;
           },
@@ -74,6 +95,13 @@ export class SidebarComponent implements OnInit {
 
   toggleSidebar() {
     this.isExpanded = !this.isExpanded;
+  }
+
+  // 👈 RESTORED: The method your HTML was looking for!
+  closeOnMobile() {
+    if (this.isMobile) {
+        this.isExpanded = false;
+    }
   }
 
   logout() {
