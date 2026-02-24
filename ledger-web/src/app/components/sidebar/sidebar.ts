@@ -2,6 +2,8 @@ import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd, Event } from '@angular/router'; // 👈 Added NavigationEnd & Event
 import { filter } from 'rxjs/operators'; // 👈 Added filter
+import { ActiveLedgerService } from '../../services/active-ledger.service';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,6 +14,7 @@ import { filter } from 'rxjs/operators'; // 👈 Added filter
 export class SidebarComponent implements OnInit {
   
   isExpanded = true;
+  activeLedger = inject(ActiveLedgerService);
   isMobile = false;       // 👈 Track mobile state
   ledgerId: string | null = null; // 👈 Track active Ledger ID
   
@@ -38,7 +41,7 @@ export class SidebarComponent implements OnInit {
   checkLedgerContext() {
     const url = this.router.url;
     // Regex to find the ID after 'ledgers/'
-    const match = url.match(/\/ledgers\/(\d+)/);
+    const match = url.match(/\/ledger\/(\d+)/);
     
     if (match) {
       this.ledgerId = match[1];

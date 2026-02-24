@@ -54,11 +54,27 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div *ngFor="let ledger of ledgers" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
                 <div>
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-xl font-bold text-slate-800 truncate">{{ ledger.name }}</h3>
-                        <span *ngIf="ledger.owner_id === 1" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Owner</span>
-                        <span *ngIf="ledger.owner_id !== 1" class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-bold">Guest</span>
-                    </div>
+                  <div class="flex justify-between items-start mb-2">
+    <h3 class="text-xl font-bold text-slate-800 truncate">{{ ledger.name }}</h3>
+    <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+        <span *ngIf="ledger.owner_id === 1" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Owner</span>
+        <span *ngIf="ledger.owner_id !== 1" class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-bold">Guest</span>
+        <ng-container *ngIf="ledger.owner_id === 1">
+            <button (click)="renameLedger(ledger)" title="Rename"
+                    class="text-slate-300 hover:text-blue-500 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"/>
+                </svg>
+            </button>
+            <button (click)="deleteLedger(ledger)" title="Delete"
+                    class="text-slate-300 hover:text-red-500 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+            </button>
+        </ng-container>
+    </div>
+</div>
                     <p class="text-slate-400 text-xs">Created: {{ ledger.created_at | date }}</p>
                 </div>
 
@@ -72,7 +88,7 @@
                     </div>
                 </div>
                 
-                <a [routerLink]="['/ledgers', ledger.id]" 
+                <a [routerLink]="['/ledger', ledger.id]" 
                    class="block text-center mt-6 w-full py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition cursor-pointer no-underline">
                     Open Ledger
                 </a>

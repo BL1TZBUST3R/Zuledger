@@ -30,4 +30,11 @@ export class LedgerService {
   authorizeUser(ledgerId: string, email: string, role: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/${ledgerId}/authorize`, { email, role });
   }
+  renameLedger(id: string, name: string): Observable<any> {
+  return this.http.put<any>(`${this.apiUrl}/${id}`, { name });
+}
+
+deleteLedger(id: string): Observable<any> {
+  return this.http.delete<any>(`${this.apiUrl}/${id}`);
+}
 }

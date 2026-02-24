@@ -84,4 +84,26 @@ export class DashboardComponent implements OnInit {
       error: (err) => alert('Invite failed: ' + (err.error?.message || err.message))
     });
   }
+
+  renameLedger(ledger: any) {
+  const newName = prompt(`Rename "${ledger.name}" to:`, ledger.name);
+  if (!newName || newName.trim() === ledger.name) return;
+
+  this.ledgerService.renameLedger(ledger.id, newName.trim()).subscribe({
+    next: (updated) => { ledger.name = updated.name; },
+    error: (err) => alert('Rename failed: ' + (err.error?.message || err.message))
+  });
+}
+
+deleteLedger(ledger: any) {
+  const confirmed = confirm(
+    `⚠️ Delete "${ledger.name}"?\n\nThis will permanently remove all accounts and transactions. This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  this.ledgerService.deleteLedger(ledger.id).subscribe({
+    next: () => { this.ledgers = this.ledgers.filter(l => l.id !== ledger.id); },
+    error: (err) => alert('Delete failed: ' + (err.error?.message || err.message))
+  });
+}
 }

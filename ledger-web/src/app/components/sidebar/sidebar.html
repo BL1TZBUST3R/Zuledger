@@ -51,6 +51,14 @@
                   [class.text-slate-900]="router.isActive('/journal', false)"
                   [class.opacity-0]="!isExpanded" [class.opacity-100]="isExpanded">Journal Entry</span>
         </a>
+        <div *ngIf="activeLedger.ledgerName()" 
+     class="mx-4 mb-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl overflow-hidden">
+  <p class="text-xs font-bold text-green-500 uppercase tracking-wider mb-0.5">Active Ledger</p>
+  <p *ngIf="isExpanded" class="text-sm font-bold text-slate-800 truncate">
+    {{ activeLedger.ledgerName() }}
+  </p>
+  <p *ngIf="!isExpanded" class="text-sm font-bold text-green-600 text-center">📒</p>
+</div>
     </nav>
     <div class="p-4 border-t border-slate-100">
         <div class="relative group">

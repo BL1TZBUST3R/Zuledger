@@ -130,4 +130,20 @@ class LedgerController extends Controller
 
         return response()->json(['message' => 'User authorized successfully.']);
     }
+    public function update(Request $request, $id)
+{
+    $ledger = Ledger::findOrFail($id);
+    $this->authorize('update', $ledger);
+    $request->validate(['name' => 'required|string']);
+    $ledger->update(['name' => $request->name]);
+    return response()->json($ledger);
+}
+
+public function destroy($id)
+{
+    $ledger = Ledger::findOrFail($id);
+    $this->authorize('delete', $ledger);
+    $ledger->delete();
+    return response()->json(['message' => 'Ledger deleted.']);
+}
 }

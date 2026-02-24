@@ -18,6 +18,9 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/ledgers', [LedgerController::class, 'index']);      // List my ledgers
     Route::post('/ledgers', [LedgerController::class, 'store']);     // Create new ledger
     Route::get('/ledgers/{id}', [LedgerController::class, 'show']);  // View specific ledger
+    Route::get('/ledgers/{id}', [LedgerController::class, 'show']);  // View specific ledger
+Route::put('/ledgers/{id}', [LedgerController::class, 'update']);    // Rename ledger
+Route::delete('/ledgers/{id}', [LedgerController::class, 'destroy']); // Delete ledger
     Route::post('/ledgers/{id}/authorize', [LedgerController::class, 'authorizeUser']); // Invite user
 
     // 👇 NEW: Ledger-Specific Account Routes
