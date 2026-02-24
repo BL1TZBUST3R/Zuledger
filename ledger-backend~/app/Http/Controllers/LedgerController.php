@@ -70,11 +70,11 @@ class LedgerController extends Controller
         }
 
         // 5. Fetch Transactions
-        $items = EntryItem::where('group_id', $id)
-            ->join('entries', 'entry_items.entry_id', '=', 'entries.id')
-            ->select('entry_items.*', 'entries.date', 'entries.number', 'entries.narration')
-            ->orderBy('entries.date', 'asc')
-            ->get();
+       $items = EntryItem::where('entry_items.ledger_id', $id)
+    ->join('entries', 'entry_items.entry_id', '=', 'entries.id')
+    ->select('entry_items.*', 'entries.date', 'entries.number', 'entries.narration')
+    ->orderBy('entries.date', 'asc')
+    ->get();
 
         // 6. Calculate Running Balance
         $isDebitSide = in_array(substr($group->code, 0, 1), ['1', '5']);

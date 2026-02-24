@@ -37,28 +37,43 @@ export class DashboardComponent implements OnInit {
     this.loadData();
   }
 
-  loadData() {
-    this.isLoading = true;
+loadData() {
+  this.isLoading = true;
+  let statsLoaded = false;
+  let ledgersLoaded = false;
 
-    // 1. Fetch Stats (Existing)
-    this.dashboardService.getStats().subscribe({
-      next: (data: any) => this.stats = data,
-      error: (err: any) => console.error('Stats error:', err)
-    });
+  const checkDone = () => {
+    if (statsLoaded && ledgersLoaded) {
+      this.isLoading = false;
+    }
+  };
 
-    // 2. Fetch Ledgers (New)
-    this.ledgerService.getLedgers().subscribe({
-      next: (data: any[]) => {
-        this.ledgers = data;
-        this.isLoading = false;
-      },
-      error: (err: any) => {
-        console.error('Ledgers error:', err);
-        this.isLoading = false;
-      }
-    });
-  }
+  this.dashboardService.getStats().subscribe({
+    next: (data: any) => {
+      this.stats = data;
+      statsLoaded = true;
+      checkDone();
+    },
+    error: (err: any) => {
+      console.error('Stats error:', err);
+      statsLoaded = true;
+      checkDone();
+    }
+  });
 
+  this.ledgerService.getLedgers().subscribe({
+    next: (data: any[]) => {
+      this.ledgers = data;
+      ledgersLoaded = true;
+      checkDone();
+    },
+    error: (err: any) => {
+      console.error('Ledgers error:', err);
+      ledgersLoaded = true;
+      checkDone();
+    }
+  });
+}
   // 🆕 Create a new Ledger (Company)
   createLedger() {
     if (!this.newLedgerName.trim()) return;
