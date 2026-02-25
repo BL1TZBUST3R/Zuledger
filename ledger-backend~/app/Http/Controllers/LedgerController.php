@@ -10,10 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class LedgerController extends Controller
 {
-    /**
-     * GET /api/ledgers
-     * List all ledgers the user has access to (Owned + Shared)
-     */
+    use \Illuminate\Foundation\Auth\Access\AuthorizesRequests;
     public function index()
     {
         // Use the scope we defined in the Model to fetch owned + invited ledgers
