@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // 👈 Needed for inputs
 import { RouterModule } from '@angular/router'; // 👈 Needed for links to ledgers
@@ -28,10 +28,11 @@ export class DashboardComponent implements OnInit {
   
   isLoading = true;
 
-  constructor(
-    private dashboardService: DashboardService,
-    private ledgerService: LedgerService // 👈 Inject the service
-  ) {}
+ constructor(
+  private dashboardService: DashboardService,
+  private ledgerService: LedgerService,
+  private cdr: ChangeDetectorRef
+) {}
 
   ngOnInit() {
     this.loadData();
@@ -42,11 +43,12 @@ loadData() {
   let statsLoaded = false;
   let ledgersLoaded = false;
 
-  const checkDone = () => {
-    if (statsLoaded && ledgersLoaded) {
-      this.isLoading = false;
-    }
-  };
+const checkDone = () => {
+  if (statsLoaded && ledgersLoaded) {
+    this.isLoading = false;
+    this.cdr.detectChanges(); // 👈 Force Angular to update the view
+  }
+};
 
   this.dashboardService.getStats().subscribe({
     next: (data: any) => {
