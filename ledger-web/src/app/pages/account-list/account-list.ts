@@ -39,7 +39,7 @@ export class AccountListComponent implements OnInit {
 
   ngOnInit() {
     // 1. Get the ID from the URL (defined in app.routes.ts as 'ledgers/:ledgerId')
-    this.ledgerId = this.route.snapshot.paramMap.get('ledgerId');
+    this.ledgerId = this.route.snapshot.paramMap.get('id');
     
     if (this.ledgerId) {
       this.fetchGroups(this.ledgerId);

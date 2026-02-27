@@ -22,7 +22,7 @@
                   [class.opacity-0]="!isExpanded" [class.opacity-100]="isExpanded">Dashboard</span>
         </a>
 
-        <a [routerLink]="ledgerId ? ['/ledgers', ledgerId] : null" 
+        <a [routerLink]="ledgerId ? ['/accounts', ledgerId] : null"
            [class.opacity-50]="!ledgerId"
            [class.cursor-not-allowed]="!ledgerId"
            routerLinkActive="bg-green-50" (click)="ledgerId ? closeOnMobile() : null"
@@ -38,7 +38,7 @@
             </span>
         </a>
 
-        <a [routerLink]="ledgerId ? ['/ledgers', ledgerId, 'journal'] : null"
+        <a [routerLink]="ledgerId ? ['/ledger', ledgerId, 'journal'] : null"
            [class.opacity-50]="!ledgerId"
            [class.cursor-not-allowed]="!ledgerId"
            routerLinkActive="bg-green-50" (click)="ledgerId ? closeOnMobile() : null"
