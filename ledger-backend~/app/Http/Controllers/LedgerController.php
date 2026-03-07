@@ -127,4 +127,22 @@ public function destroy($id)
     $ledger->delete();
     return response()->json(['message' => 'Ledger deleted.']);
 }
+public function removeUser(Request $request, $id)
+{
+    $ledger = Ledger::findOrFail($id);
+    $this->authorize('delete', $ledger); // Only owner can remove users
+
+    $request->validate([
+        'user_id' => 'required|exists:users,id'
+    ]);
+
+    // Prevent owner from removing themselves
+    if ($request->user_id == $ledger->owner_id) {
+        return response()->json(['message' => 'Cannot remove the owner.'], 422);
+    }
+
+    $ledger->authorizedUsers()->detach($request->user_id);
+
+    return response()->json(['message' => 'User removed successfully.']);
+}
 }

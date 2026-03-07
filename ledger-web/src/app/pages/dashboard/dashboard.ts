@@ -27,6 +27,7 @@ export class DashboardComponent implements OnInit {
   inviteEmail: string = '';
   
   isLoading = true;
+  currentUserId: number = 0;
 
  constructor(
   private dashboardService: DashboardService,
@@ -34,21 +35,23 @@ export class DashboardComponent implements OnInit {
   private cdr: ChangeDetectorRef
 ) {}
 
-  ngOnInit() {
-    this.loadData();
-  }
+ ngOnInit() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  this.currentUserId = user.id || 0;
+  this.loadData();
+}
 
 loadData() {
   this.isLoading = true;
   let statsLoaded = false;
   let ledgersLoaded = false;
 
-const checkDone = () => {
-  if (statsLoaded && ledgersLoaded) {
-    this.isLoading = false;
-    this.cdr.detectChanges(); // 👈 Force Angular to update the view
-  }
-};
+  const checkDone = () => {
+    if (statsLoaded && ledgersLoaded) {
+      this.isLoading = false;
+      this.cdr.detectChanges();
+    }
+  };
 
   this.dashboardService.getStats().subscribe({
     next: (data: any) => {
@@ -65,7 +68,7 @@ const checkDone = () => {
 
   this.ledgerService.getLedgers().subscribe({
     next: (data: any[]) => {
-      this.ledgers = data;
+      this.ledgers = data.map(l => ({ ...l, authorizedUsers: l.authorized_users || [] }));
       ledgersLoaded = true;
       checkDone();
     },
@@ -121,6 +124,17 @@ deleteLedger(ledger: any) {
   this.ledgerService.deleteLedger(ledger.id).subscribe({
     next: () => { this.ledgers = this.ledgers.filter(l => l.id !== ledger.id); },
     error: (err) => alert('Delete failed: ' + (err.error?.message || err.message))
+  });
+}
+removeUser(ledger: any, user: any) {
+  const confirmed = confirm(`Remove ${user.email} from "${ledger.name}"?`);
+  if (!confirmed) return;
+
+  this.ledgerService.removeUser(ledger.id, user.id).subscribe({
+    next: () => {
+      ledger.authorizedUsers = ledger.authorizedUsers.filter((u: any) => u.id !== user.id);
+    },
+    error: (err) => alert('Failed to remove user: ' + (err.error?.message || err.message))
   });
 }
 }
