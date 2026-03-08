@@ -9,13 +9,18 @@ class Group extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'parent_id', // 👈 Ensure this is here too
-        'name',
-        'code',
-        'affects_gross',
-    ];
+  protected $fillable = [
+    'user_id',
+    'ledger_id',
+    'parent_id',
+    'name',
+    'code',
+    'affects_gross',
+    'account_type',
+    'account_subtype',
+    'cashflow_type',
+    'normal_balance',
+];
 
     // 👇 ADD THESE TWO FUNCTIONS
     public function parent()

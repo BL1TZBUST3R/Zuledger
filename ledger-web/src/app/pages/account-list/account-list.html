@@ -94,39 +94,95 @@
             </button>
         </div>
 
-        <div class="p-6 space-y-4">
-            
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">Parent Group</label>
-                <select [(ngModel)]="newAccount.parent_id" 
-        (change)="onParentChange()" 
-        class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
-    <option value="" disabled selected>Select a group...</option>
-    <option *ngFor="let group of groups" [value]="group.id">
-        {{ group.code }} - {{ group.name }}
-    </option>
-</select>
-            </div>
+       <div class="p-6 space-y-4">
+    
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Parent Group</label>
+        <select [(ngModel)]="newAccount.parent_id" 
+                (change)="onParentChange()" 
+                class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+            <option value="" disabled selected>Select a group...</option>
+            <option *ngFor="let group of groups" [value]="group.id">
+                {{ group.code }} - {{ group.name }}
+            </option>
+        </select>
+    </div>
 
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">Account Name</label>
-                <input [(ngModel)]="newAccount.name" type="text" placeholder="e.g. Petty Cash" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
-            </div>
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Account Name</label>
+        <input [(ngModel)]="newAccount.name" type="text" placeholder="e.g. Petty Cash" 
+               class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+    </div>
 
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">Account Code</label>
-                <input [(ngModel)]="newAccount.code" type="text" placeholder="e.g. 1010" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
-            </div>
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Account Code</label>
+        <input [(ngModel)]="newAccount.code" type="text" placeholder="e.g. 1010" 
+               class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+    </div>
 
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Account Type</label>
+        <select [(ngModel)]="newAccount.account_type" (change)="onAccountTypeChange()"
+                class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+            <option value="" disabled selected>Select type...</option>
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+            <option value="equity">Equity</option>
+            <option value="revenue">Revenue</option>
+            <option value="expense">Expense</option>
+        </select>
+    </div>
+
+    <div *ngIf="showSubtype">
+        <label class="block text-sm font-bold text-slate-700 mb-1">Sub-type</label>
+        <select [(ngModel)]="newAccount.account_subtype"
+                class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+            <option value="" disabled selected>Select sub-type...</option>
+            <ng-container *ngIf="newAccount.account_type === 'asset' || newAccount.account_type === 'liability'">
+                <option value="current">Current</option>
+                <option value="non-current">Non-Current</option>
+            </ng-container>
+            <ng-container *ngIf="newAccount.account_type === 'revenue' || newAccount.account_type === 'expense'">
+                <option value="direct">Direct</option>
+                <option value="indirect">Indirect</option>
+            </ng-container>
+        </select>
+    </div>
+
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Cash Flow Type</label>
+        <select [(ngModel)]="newAccount.cashflow_type"
+                class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+            <option value="" disabled selected>Select cash flow...</option>
+            <option value="operating">Operating Activities</option>
+            <option value="investing">Investing Activities</option>
+            <option value="financing">Financing Activities</option>
+        </select>
+    </div>
+
+    <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Normal Balance</label>
+        <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" [(ngModel)]="newAccount.normal_balance" value="DR" name="normal_balance">
+                <span class="text-sm text-slate-700">Debit (DR)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" [(ngModel)]="newAccount.normal_balance" value="CR" name="normal_balance">
+                <span class="text-sm text-slate-700">Credit (CR)</span>
+            </label>
         </div>
+        <p class="text-xs text-slate-400 mt-1">{{ normalBalanceHint }}</p>
+    </div>
 
-        <div class="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
+</div>
+<div class="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
             <button (click)="closeModal()" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">Cancel</button>
             <button (click)="createAccount()" [disabled]="isSaving" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-all flex items-center">
                 <span *ngIf="isSaving">Saving...</span>
                 <span *ngIf="!isSaving">Create Account</span>
             </button>
         </div>
-
     </div>
+</div>
 </div>

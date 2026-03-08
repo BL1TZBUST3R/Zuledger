@@ -23,37 +23,41 @@ class GroupController extends Controller
                     ->get();
     }
 
-  
-    public function store(Request $request, $ledgerId)
-    {
-        $ledger = Ledger::findOrFail($ledgerId);
+ public function store(Request $request, $ledgerId)
+{
+    $ledger = Ledger::findOrFail($ledgerId);
+    $this->authorize('update', $ledger);
 
-        // 🛡️ Security: Only owners or editors can add accounts
-        $this->authorize('update', $ledger);
+    $request->validate([
+        'name'          => 'required|string',
+        'code'          => 'required|string',
+        'parent_id'     => 'nullable|exists:groups,id',
+        'account_type'  => 'required|in:asset,liability,equity,revenue,expense',
+        'account_subtype' => 'nullable|in:current,non-current,direct,indirect',
+        'cashflow_type' => 'nullable|in:operating,investing,financing',
+        'normal_balance' => 'required|in:DR,CR',
+    ]);
 
-        $request->validate([
-            'name' => 'required|string',
-            'code' => 'required|string',
-            'parent_id' => 'nullable|exists:groups,id'
-        ]);
-
-        // Validation: Ensure parent belongs to the SAME ledger
-        if ($request->parent_id) {
-            $parent = Group::find($request->parent_id);
-            if ($parent->ledger_id != $ledgerId) {
-                return response()->json(['message' => 'Parent account must belong to the same ledger'], 422);
-            }
+    if ($request->parent_id) {
+        $parent = Group::find($request->parent_id);
+        if ($parent->ledger_id != $ledgerId) {
+            return response()->json(['message' => 'Parent account must belong to the same ledger'], 422);
         }
-
-        $group = Group::create([
-            'user_id' => Auth::id(),   // Who created it (Audit trail)
-            'ledger_id' => $ledgerId,  // 👈 IMPORTANT: Link to the specific ledger
-            'parent_id' => $request->parent_id,
-            'name' => $request->name,
-            'code' => $request->code,
-            'affects_gross' => 0, 
-        ]);
-
-        return response()->json($group, 201);
     }
+
+    $group = Group::create([
+        'user_id'         => Auth::id(),
+        'ledger_id'       => $ledgerId,
+        'parent_id'       => $request->parent_id,
+        'name'            => $request->name,
+        'code'            => $request->code,
+        'affects_gross'   => 0,
+        'account_type'    => $request->account_type,
+        'account_subtype' => $request->account_subtype,
+        'cashflow_type'   => $request->cashflow_type,
+        'normal_balance'  => $request->normal_balance,
+    ]);
+
+    return response()->json($group, 201);
+}
 }
