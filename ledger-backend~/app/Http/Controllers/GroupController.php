@@ -60,6 +60,38 @@ class GroupController extends Controller
         'normal_balance'  => $request->normal_balance,
     ]);
 
-    return response()->json($group, 201);
+  return response()->json($group, 201);
 }
+
+    public function exportExcel($ledgerId)
+    {
+        $ledger = Ledger::findOrFail($ledgerId);
+        $this->authorize('view', $ledger);
+
+        $export = new \App\Exports\GroupsExport($ledgerId);
+        $filePath = $export->export();
+
+        return response()->download($filePath, 'chart_of_accounts.xlsx')->deleteFileAfterSend(true);
+    }
+    public function importExcel(Request $request, $ledgerId)
+    {
+        $ledger = Ledger::findOrFail($ledgerId);
+        $this->authorize('update', $ledger);
+
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
+            'mode' => 'nullable|in:add,replace',
+        ]);
+
+        $mode = $request->input('mode', 'add');
+        $filePath = $request->file('file')->getPathname();
+
+        $import = new \App\Imports\GroupsImport($ledgerId);
+        $result = $import->import($filePath, $mode);
+
+        $status = $result['success'] ? 200 : 422;
+
+        return response()->json($result, $status);
+    }
 }
+

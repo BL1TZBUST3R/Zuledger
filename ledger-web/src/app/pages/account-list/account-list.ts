@@ -27,6 +27,14 @@ export class AccountListComponent implements OnInit {
   isLoading: boolean = true;
   showModal: boolean = false;
   isSaving: boolean = false;
+  isExporting: boolean = false;
+  showImportModal: boolean = false;
+  isImporting: boolean = false;
+  importMode: string = 'add';
+  selectedFile: File | null = null;
+  importErrors: string[] = [];
+  importSuccess: boolean = false;
+  importedCount: number = 0;
   showSubtype: boolean = false;
   ledgerId: string | null = null;
 
@@ -136,6 +144,71 @@ export class AccountListComponent implements OnInit {
         console.error(err);
         alert('Failed to create account.');
         this.isSaving = false;
+      }
+    });
+  }
+  exportCOA() {
+    if (!this.ledgerId) return;
+
+    this.isExporting = true;
+
+    this.accountService.exportGroups(this.ledgerId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chart_of_accounts.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.isExporting = false;
+      },
+      error: (err) => {
+        console.error('Export failed', err);
+        alert('Failed to export Chart of Accounts.');
+        this.isExporting = false;
+      }
+    });
+  }
+  openImportModal() {
+    this.showImportModal = true;
+    this.selectedFile = null;
+    this.importErrors = [];
+    this.importSuccess = false;
+    this.importedCount = 0;
+    this.importMode = 'add';
+  }
+
+  closeImportModal() {
+    this.showImportModal = false;
+  }
+
+  onFileSelected(event: any) {
+    this.selectedFile = event.target.files[0] || null;
+    this.importErrors = [];
+    this.importSuccess = false;
+  }
+
+  importCOA() {
+    if (!this.ledgerId || !this.selectedFile) return;
+
+    this.isImporting = true;
+    this.importErrors = [];
+    this.importSuccess = false;
+
+    this.accountService.importGroups(this.ledgerId, this.selectedFile, this.importMode).subscribe({
+      next: (result) => {
+        this.importSuccess = true;
+        this.importedCount = result.imported;
+        this.fetchGroups(this.ledgerId!);
+        this.isImporting = false;
+      },
+      error: (err) => {
+        if (err.error && err.error.errors) {
+          this.importErrors = err.error.errors;
+        } else {
+          this.importErrors = ['An unexpected error occurred.'];
+        }
+        this.isImporting = false;
       }
     });
   }
