@@ -7,12 +7,10 @@ import { Observable } from 'rxjs';
 })
 export class AccountService {
 
-  // ⚠️ Change to http://localhost:8000/api if testing locally
-  private apiUrl = 'https://zuledger.onrender.com/api'; 
+  private apiUrl = 'https://zuledger.onrender.com/api';
 
   constructor(private http: HttpClient) { }
 
-  // Helper to manually attach the token (if not using an Interceptor)
   private getHeaders() {
     const token = localStorage.getItem('auth_token');
     return {
@@ -22,15 +20,34 @@ export class AccountService {
     };
   }
 
-  // 1. Get Groups for a specific Ledger
-  // GET /api/ledgers/{id}/groups
   getGroups(ledgerId: string): Observable<any> {
     return this.http.get(`${this.apiUrl}/ledgers/${ledgerId}/groups`, this.getHeaders());
   }
 
-  // 2. Create a Group inside a specific Ledger
-  // POST /api/ledgers/{id}/groups
   createGroup(ledgerId: string, data: any): Observable<any> {
     return this.http.post(`${this.apiUrl}/ledgers/${ledgerId}/groups`, data, this.getHeaders());
+  }
+
+  exportGroups(ledgerId: string): Observable<Blob> {
+    const token = localStorage.getItem('auth_token');
+    return this.http.get(`${this.apiUrl}/ledgers/${ledgerId}/groups/export`, {
+      headers: new HttpHeaders({
+        'Authorization': `Bearer ${token}`
+      }),
+      responseType: 'blob'
+    });
+  }
+
+  importGroups(ledgerId: string, file: File, mode: string = 'add'): Observable<any> {
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', mode);
+
+    return this.http.post(`${this.apiUrl}/ledgers/${ledgerId}/groups/import`, formData, {
+      headers: new HttpHeaders({
+        'Authorization': `Bearer ${token}`
+      })
+    });
   }
 }

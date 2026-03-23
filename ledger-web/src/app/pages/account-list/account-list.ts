@@ -77,12 +77,12 @@ export class AccountListComponent implements OnInit {
 
   fetchGroups(id: string) {
     this.accountService.getGroups(id).subscribe({
-      next: (data) => {
+      next: (data: any) => {
         this.groups = data;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         this.isLoading = false;
       }
@@ -110,7 +110,6 @@ export class AccountListComponent implements OnInit {
     this.showSubtype = ['asset', 'liability', 'revenue', 'expense'].includes(type);
     this.newAccount.account_subtype = '';
 
-    // Auto-set normal balance based on account type
     if (type === 'asset' || type === 'expense') {
       this.newAccount.normal_balance = 'DR';
     } else if (type === 'liability' || type === 'equity' || type === 'revenue') {
@@ -129,7 +128,7 @@ export class AccountListComponent implements OnInit {
   }
 
   createAccount() {
-   if (!this.newAccount.name || !this.newAccount.code || 
+    if (!this.newAccount.name || !this.newAccount.code || 
         !this.newAccount.account_type || !this.newAccount.normal_balance || !this.ledgerId) return;
 
     this.isSaving = true;
@@ -140,35 +139,14 @@ export class AccountListComponent implements OnInit {
         this.closeModal();
         this.isSaving = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         alert('Failed to create account.');
         this.isSaving = false;
       }
     });
   }
-  exportCOA() {
-    if (!this.ledgerId) return;
 
-    this.isExporting = true;
-
-    this.accountService.exportGroups(this.ledgerId).subscribe({
-      next: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'chart_of_accounts.xlsx';
-        a.click();
-        window.URL.revokeObjectURL(url);
-        this.isExporting = false;
-      },
-      error: (err) => {
-        console.error('Export failed', err);
-        alert('Failed to export Chart of Accounts.');
-        this.isExporting = false;
-      }
-    });
-  }
   openImportModal() {
     this.showImportModal = true;
     this.selectedFile = null;
@@ -182,10 +160,34 @@ export class AccountListComponent implements OnInit {
     this.showImportModal = false;
   }
 
-  onFileSelected(event: any) {
-    this.selectedFile = event.target.files[0] || null;
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] || null;
     this.importErrors = [];
     this.importSuccess = false;
+  }
+
+  exportCOA() {
+    if (!this.ledgerId) return;
+
+    this.isExporting = true;
+
+    this.accountService.exportGroups(this.ledgerId).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chart_of_accounts.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.isExporting = false;
+      },
+      error: (err: any) => {
+        console.error('Export failed', err);
+        alert('Failed to export Chart of Accounts.');
+        this.isExporting = false;
+      }
+    });
   }
 
   importCOA() {
@@ -196,13 +198,13 @@ export class AccountListComponent implements OnInit {
     this.importSuccess = false;
 
     this.accountService.importGroups(this.ledgerId, this.selectedFile, this.importMode).subscribe({
-      next: (result) => {
+      next: (result: any) => {
         this.importSuccess = true;
         this.importedCount = result.imported;
         this.fetchGroups(this.ledgerId!);
         this.isImporting = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         if (err.error && err.error.errors) {
           this.importErrors = err.error.errors;
         } else {
