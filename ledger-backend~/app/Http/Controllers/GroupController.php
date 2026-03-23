@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\Group;
 use App\Models\Ledger;
 
 class GroupController extends Controller
 {
+    use AuthorizesRequests;
     public function index($ledgerId)
     {
         $ledger = Ledger::findOrFail($ledgerId);

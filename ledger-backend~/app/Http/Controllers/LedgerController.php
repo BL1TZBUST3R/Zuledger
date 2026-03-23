@@ -22,18 +22,26 @@ class LedgerController extends Controller
      * POST /api/ledgers
      * Create a new Ledger
      */
-    public function store(Request $request)
-    {
-        $request->validate(['name' => 'required|string']);
+ public function store(Request $request)
+{
+    $request->validate([
+        'name'     => 'required|string',
+        'template' => 'nullable|in:company,trust,partnership,sole_trader'
+    ]);
 
-        $ledger = Ledger::create([
-            'name' => $request->name,
-            'owner_id' => Auth::id(),
-        ]);
+    $ledger = Ledger::create([
+        'name'     => $request->name,
+        'owner_id' => Auth::id(),
+    ]);
 
-        return response()->json($ledger, 201);
+    // Seed the chart of accounts if a template was chosen
+    if ($request->template) {
+        $seeder = new \Database\Seeders\GroupSeeder();
+        $seeder->run(Auth::user(), $ledger, $request->template);
     }
 
+    return response()->json($ledger, 201);
+}
     public function show($id)
 {
     // 1. Get the Ledger directly
