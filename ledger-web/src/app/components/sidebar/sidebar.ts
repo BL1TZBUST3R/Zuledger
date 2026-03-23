@@ -41,10 +41,10 @@ export class SidebarComponent implements OnInit {
   checkLedgerContext() {
     const url = this.router.url;
     // Regex to find the ID after 'ledgers/'
-    const match = url.match(/\/ledger\/(\d+)/);
+    const match = url.match(/\/(ledger|accounts)\/(\d+)/);
     
     if (match) {
-      this.ledgerId = match[1];
+    this.ledgerId = match[2];
     } else {
       // If we are on the Dashboard or Login, clear the ID
       this.ledgerId = null; 

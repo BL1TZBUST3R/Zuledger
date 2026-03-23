@@ -22,10 +22,9 @@ export class LedgerService {
   }
 
   // 3. Create a New Ledger
-  createLedger(name: string): Observable<any> {
-    return this.http.post<any>(this.apiUrl, { name });
-  }
-
+  createLedger(name: string, template: string = ''): Observable<any> {
+  return this.http.post<any>(this.apiUrl, { name, template });
+}
   // 4. Authorize / Invite User
   authorizeUser(ledgerId: string, email: string, role: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/${ledgerId}/authorize`, { email, role });

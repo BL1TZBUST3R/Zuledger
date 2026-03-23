@@ -24,6 +24,7 @@ export class DashboardComponent implements OnInit {
   // 🆕 Multi-Ledger State
   ledgers: any[] = [];
   newLedgerName: string = '';
+  newLedgerTemplate: string = '';
   inviteEmail: string = '';
   
   isLoading = true;
@@ -80,18 +81,22 @@ loadData() {
   });
 }
   // 🆕 Create a new Ledger (Company)
-  createLedger() {
-    if (!this.newLedgerName.trim()) return;
+ createLedger() {
+  if (!this.newLedgerName.trim()) return;
 
-    this.ledgerService.createLedger(this.newLedgerName).subscribe({
-      next: (newLedger) => {
-        this.ledgers.push(newLedger); // Update UI immediately
-        this.newLedgerName = ''; // Clear input
-        alert(`Ledger "${newLedger.name}" created!`);
-      },
-      error: (err) => alert('Failed to create ledger: ' + (err.error?.message || err.message))
-    });
-  }
+  this.ledgerService.createLedger(this.newLedgerName, this.newLedgerTemplate).subscribe({
+    next: (newLedger) => {
+      this.ledgers.push({ ...newLedger, authorizedUsers: [] });
+      this.newLedgerName = '';
+      this.newLedgerTemplate = '';
+      this.isLoading = false;
+    },
+    error: (err) => {
+      this.isLoading = false;
+      alert('Failed to create ledger: ' + (err.error?.message || err.message));
+    }
+  });
+}
 
   // 🆕 Invite User logic (The "Authorize Other Accounts" feature)
   inviteUser(ledger: any) {
