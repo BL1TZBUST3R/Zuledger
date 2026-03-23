@@ -129,7 +129,7 @@ export class AccountListComponent implements OnInit {
   }
 
   createAccount() {
-    if (!this.newAccount.parent_id || !this.newAccount.name || !this.newAccount.code || 
+   if (!this.newAccount.name || !this.newAccount.code || 
         !this.newAccount.account_type || !this.newAccount.normal_balance || !this.ledgerId) return;
 
     this.isSaving = true;
