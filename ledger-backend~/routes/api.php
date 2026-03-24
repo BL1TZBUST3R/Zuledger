@@ -19,16 +19,24 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/ledgers', [LedgerController::class, 'store']);     // Create new ledger
     Route::get('/ledgers/{id}', [LedgerController::class, 'show']);  // View specific ledger
     Route::get('/ledgers/{id}', [LedgerController::class, 'show']);  // View specific ledger
-Route::put('/ledgers/{id}', [LedgerController::class, 'update']);    // Rename ledger
-Route::delete('/ledgers/{id}', [LedgerController::class, 'destroy']); // Delete ledger
+    Route::put('/ledgers/{id}', [LedgerController::class, 'update']);    // Rename ledger
+    Route::delete('/ledgers/{id}', [LedgerController::class, 'destroy']); // Delete ledger
     Route::post('/ledgers/{id}/authorize', [LedgerController::class, 'authorizeUser']); // Invite user
+    Route::delete('/ledgers/{id}/users', [LedgerController::class, 'removeUser']);
 
     // 👇 NEW: Ledger-Specific Account Routes
     // These allow fetching/creating accounts for a specific Company Ledger
     Route::get('/ledgers/{id}/groups', [GroupController::class, 'index']); 
     Route::post('/ledgers/{id}/groups', [GroupController::class, 'store']);
-
-    // Dashboard & Entries
+    Route::get('/ledgers/{id}/groups/export', [GroupController::class, 'exportExcel']);
+    Route::post('/ledgers/{id}/groups/import', [GroupController::class, 'importExcel']);
+     Route::get('/ledgers/{id}/journals', [App\Http\Controllers\JournalController::class, 'index']);
+    Route::get('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'show']);
+    Route::post('/ledgers/{id}/journals', [App\Http\Controllers\JournalController::class, 'store']);
+    Route::put('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'update']);
+    Route::patch('/ledgers/{id}/journals/{journalId}/post', [App\Http\Controllers\JournalController::class, 'post']);
+    Route::patch('/ledgers/{id}/journals/{journalId}/unpost', [App\Http\Controllers\JournalController::class, 'unpost']);
+    Route::delete('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'destroy']);
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
     Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);
 });
