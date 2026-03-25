@@ -12,6 +12,6 @@ export const routes: Routes = [
     { path: 'dashboard', component: DashboardComponent },
     { path: 'accounts/:id', component: AccountListComponent },
     { path: '', redirectTo: 'login', pathMatch: 'full' },
-    { path: 'journal', component: JournalEntryComponent },
+   { path: 'ledger/:id/journal', component: JournalEntryComponent },
     { path: 'ledger/:id', component: LedgerComponent },
 ];
