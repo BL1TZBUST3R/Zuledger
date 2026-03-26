@@ -119,7 +119,7 @@ export class AccountListComponent implements OnInit {
     }
   }
 
-  onAccountTypeChange() {
+ onAccountTypeChange() {
     const type = this.newAccount.account_type;
     this.showSubtype = ['asset', 'liability', 'revenue', 'expense'].includes(type);
     this.newAccount.account_subtype = '';
@@ -129,6 +129,44 @@ export class AccountListComponent implements OnInit {
     } else if (type === 'liability' || type === 'equity' || type === 'revenue') {
       this.newAccount.normal_balance = 'CR';
     }
+
+    // Auto-generate code based on account type
+    this.newAccount.code = this.generateNextCode(type);
+  }
+
+  generateNextCode(type: string): string {
+    const baseMap: { [key: string]: number } = {
+      'asset': 1000,
+      'liability': 2000,
+      'equity': 3000,
+      'revenue': 4000,
+      'expense': 5000,
+    };
+
+    const base = baseMap[type];
+    if (!base) return '';
+
+    // Collect all existing codes in this range
+    const existingCodes: number[] = [];
+    this.groups.forEach((group: Group) => {
+      const code = parseInt(group.code);
+      if (code >= base && code < base + 1000) {
+        existingCodes.push(code);
+      }
+      if (group.children) {
+        group.children.forEach((child: Group) => {
+          const childCode = parseInt(child.code);
+          if (childCode >= base && childCode < base + 1000) {
+            existingCodes.push(childCode);
+          }
+        });
+      }
+    });
+
+    if (existingCodes.length === 0) return base.toString();
+
+    const maxCode = Math.max(...existingCodes);
+    return (maxCode + 1).toString();
   }
 
   openCreateModal() {
