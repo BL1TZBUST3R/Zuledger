@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AccountService } from '../../services/account';
+import { ActiveLedgerService } from '../../services/active-ledger.service';
+import { LedgerService } from '../../services/ledger.service';
 
 interface Group {
   id: number;
@@ -62,17 +64,29 @@ export class AccountListComponent implements OnInit {
   constructor(
     private accountService: AccountService,
     private cdr: ChangeDetectorRef,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private activeLedger: ActiveLedgerService,
+    private ledgerService: LedgerService
   ) {}
 
   ngOnInit() {
     this.ledgerId = this.route.snapshot.paramMap.get('id');
     if (this.ledgerId) {
       this.fetchGroups(this.ledgerId);
+      this.loadLedgerName(this.ledgerId);
     } else {
       console.error('No Ledger ID found!');
       this.isLoading = false;
     }
+  }
+
+  loadLedgerName(id: string) {
+    this.ledgerService.getLedger(id).subscribe({
+      next: (data: any) => {
+        this.activeLedger.set(data.account?.name || data.name || 'Ledger');
+      },
+      error: (err: any) => console.error(err)
+    });
   }
 
   fetchGroups(id: string) {
