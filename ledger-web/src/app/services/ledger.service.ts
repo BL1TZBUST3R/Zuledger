@@ -1,59 +1,43 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LedgerService {
-  // ⚠️ Update this URL if you are testing locally
+  // Update this to your Render URL for production
   private apiUrl = 'https://zuledger.onrender.com/api/ledgers'; 
 
   constructor(private http: HttpClient) { }
 
-  private getHeaders() {
-    // Make sure this matches how you save the token in login ('token' or 'auth_token')
-    const token = localStorage.getItem('token') || localStorage.getItem('auth_token'); 
-    return {
-      headers: new HttpHeaders({
-        'Authorization': `Bearer ${token}`
-      })
-    };
+  // 1. Get List of Ledgers (Owned + Shared)
+  getLedgers(): Observable<any> {
+    return this.http.get<any>(this.apiUrl);
   }
 
-  getLedgers(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl, this.getHeaders());
-  }
-
-  // Used for fetching transactions
+  // 2. Get Single Ledger Details
   getLedger(id: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/${id}`, this.getHeaders());
+    return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  createLedger(name: string): Observable<any> {
-    return this.http.post<any>(this.apiUrl, { name }, this.getHeaders());
+  // 3. Create a New Ledger
+  createLedger(name: string, template: string = ''): Observable<any> {
+  return this.http.post<any>(this.apiUrl, { name, template });
+}
+  // 4. Authorize / Invite User
+  authorizeUser(ledgerId: string, email: string, role: string): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${ledgerId}/authorize`, { email, role });
   }
+  
+  renameLedger(id: string, name: string): Observable<any> {
+  return this.http.put<any>(`${this.apiUrl}/${id}`, { name });
+}
 
-  authorizeUser(ledgerId: number, email: string, role: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${ledgerId}/authorize`, { email, role }, this.getHeaders());
-  }
-
-  // ==========================================
-  // 👇 NEW METHODS TO FIX YOUR ERROR
-  // ==========================================
-
-  // Used by Sidebar to get the Company Name
-  getCompanyInfo(id: string): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/${id}/info`, this.getHeaders());
-  }
-
-  // Used by Dashboard to Rename
-  updateLedger(id: number, name: string): Observable<any> {
-    return this.http.put<any>(`${this.apiUrl}/${id}`, { name }, this.getHeaders());
-  }
-
-  // Used by Dashboard to Delete
-  deleteLedger(id: number): Observable<any> {
-    return this.http.delete<any>(`${this.apiUrl}/${id}`, this.getHeaders());
-  }
+deleteLedger(id: string): Observable<any> {
+  return this.http.delete<any>(`${this.apiUrl}/${id}`);
+}
+removeUser(ledgerId: string, userId: number): Observable<any> {
+  return this.http.delete<any>(`${this.apiUrl}/${ledgerId}/users`, { body: { user_id: userId } });
+}
 }

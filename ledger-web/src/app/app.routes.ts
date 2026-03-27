@@ -10,8 +10,8 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent },
     { path: 'register', component: RegisterComponent },
     { path: 'dashboard', component: DashboardComponent },
-    { path: 'accounts', component: AccountListComponent },
+    { path: 'accounts/:id', component: AccountListComponent },
     { path: '', redirectTo: 'login', pathMatch: 'full' },
-    { path: 'journal', component: JournalEntryComponent },
+   { path: 'ledger/:id/journal', component: JournalEntryComponent },
     { path: 'ledger/:id', component: LedgerComponent },
 ];

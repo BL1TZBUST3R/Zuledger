@@ -37,63 +37,85 @@
         </div>
     </div>
 
-    <div>
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-slate-800">My Ledgers</h2>
-            
-            <div class="flex gap-2">
-                <input type="text" [(ngModel)]="newLedgerName" placeholder="New Company Name" 
-                       class="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
-                <button (click)="createLedger()" 
-                        class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">
-                    + Create
-                </button>
-            </div>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-slate-800">My Ledgers</h2>
+        <div class="flex gap-2">
+            <input type="text" [(ngModel)]="newLedgerName" placeholder="New Company Name" 
+                   class="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+            <select [(ngModel)]="newLedgerTemplate"
+                    class="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-blue-500 bg-white">
+                <option value="">No Template</option>
+                <option value="company">Company</option>
+                <option value="trust">Trust</option>
+                <option value="partnership">Partnership</option>
+                <option value="sole_trader">Sole Trader</option>
+            </select>
+            <button (click)="createLedger()" 
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition">
+                + Create
+            </button>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div *ngFor="let ledger of ledgers" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-xl font-bold text-slate-800 truncate">{{ ledger.name }}</h3>
-                        
-                        <div class="flex items-center gap-2">
-                            <span *ngIf="ledger.owner_id === 1" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Owner</span>
-                            <span *ngIf="ledger.owner_id !== 1" class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-bold">Guest</span>
-                            
-                            <div *ngIf="ledger.owner_id === 1" class="flex gap-1 border-l border-slate-100 pl-2">
-                                <button (click)="renameLedger(ledger)" class="text-slate-400 hover:text-blue-600 p-1 transition-colors" title="Rename">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                </button>
-                                <button (click)="deleteLedger(ledger)" class="text-slate-400 hover:text-red-600 p-1 transition-colors" title="Delete">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                </button>
-                            </div>
-                        </div>
-
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div *ngFor="let ledger of ledgers" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="text-xl font-bold text-slate-800 truncate">{{ ledger.name }}</h3>
+                    <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span *ngIf="ledger.owner_id === currentUserId" class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-bold">Owner</span>
+                        <span *ngIf="ledger.owner_id !== currentUserId" class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-bold">Guest</span>
+                        <ng-container *ngIf="ledger.owner_id === currentUserId">
+                            <button (click)="renameLedger(ledger)" title="Rename"
+                                    class="text-slate-300 hover:text-blue-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H9v-2.414a2 2 0 01.586-1.414z"/>
+                                </svg>
+                            </button>
+                            <button (click)="deleteLedger(ledger)" title="Delete"
+                                    class="text-slate-300 hover:text-red-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                                </svg>
+                            </button>
+                        </ng-container>
                     </div>
-                    <p class="text-slate-400 text-xs">Created: {{ ledger.created_at | date }}</p>
                 </div>
+                <p class="text-slate-400 text-xs">Created: {{ ledger.created_at | date }}</p>
+            </div>
 
-                <div class="mt-6 pt-4 border-t border-slate-100">
-                    <div class="flex gap-2">
-                        <input type="email" [(ngModel)]="ledger.inviteEmail" placeholder="Invite email..." 
-                               class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:border-blue-400 transition">
-                        <button (click)="inviteUser(ledger)" class="text-blue-600 font-bold text-xs uppercase hover:underline">
-                            Invite
+            <div class="mt-6 pt-4 border-t border-slate-100">
+                <div *ngIf="ledger.authorizedUsers && ledger.authorizedUsers.length > 0" class="mb-3">
+                    <p class="text-xs font-bold text-slate-500 uppercase mb-2">Shared With</p>
+                    <div *ngFor="let u of ledger.authorizedUsers" class="flex items-center justify-between py-1">
+                        <span class="text-xs text-slate-600">{{ u.email }}</span>
+                        <button *ngIf="ledger.owner_id === currentUserId" 
+                                (click)="removeUser(ledger, u)"
+                                class="text-red-400 hover:text-red-600 transition-colors ml-2">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
-                
-                <a [routerLink]="['/ledgers', ledger.id]" 
-                   class="block text-center mt-6 w-full py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition cursor-pointer no-underline">
-                    Open Ledger
-                </a>
-            </div>
 
-            <div *ngIf="ledgers.length === 0" class="col-span-full text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
-                You don't have any ledgers yet. Create one above to get started!
+                <div *ngIf="ledger.owner_id === currentUserId" class="flex gap-2">
+                    <input type="email" [(ngModel)]="ledger.inviteEmail" placeholder="Invite email..." 
+                           class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:bg-white focus:border-blue-400 transition">
+                    <button (click)="inviteUser(ledger)" class="text-blue-600 font-bold text-xs uppercase hover:underline">
+                        Invite
+                    </button>
+                </div>
             </div>
+                
+            <a [routerLink]="['/accounts', ledger.id]" 
+               class="block text-center mt-6 w-full py-2 bg-slate-800 text-white rounded-lg text-sm font-bold hover:bg-slate-700 transition cursor-pointer no-underline">
+                Open Ledger
+            </a>
+        </div>
+
+        <div *ngIf="ledgers.length === 0" class="col-span-full text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300 text-slate-400">
+            You don't have any ledgers yet. Create one above to get started!
         </div>
     </div>
 </div>

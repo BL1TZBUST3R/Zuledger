@@ -1,8 +1,9 @@
 import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router, NavigationEnd, Event } from '@angular/router';
-import { filter } from 'rxjs/operators';
-import { LedgerService } from '../../services/ledger.service';
+import { RouterModule, Router, NavigationEnd, Event } from '@angular/router'; // 👈 Added NavigationEnd & Event
+import { filter } from 'rxjs/operators'; // 👈 Added filter
+import { ActiveLedgerService } from '../../services/active-ledger.service';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-sidebar',
@@ -13,17 +14,16 @@ import { LedgerService } from '../../services/ledger.service';
 export class SidebarComponent implements OnInit {
   
   isExpanded = true;
-  isMobile = false; // 👈 Restored mobile tracking
+  activeLedger = inject(ActiveLedgerService);
+  isMobile = false;       // 👈 Track mobile state
+  ledgerId: string | null = null; // 👈 Track active Ledger ID
+  
   userName = 'User';
   userEmail = '';
 
-  ledgerId: string | null = null;
-  activeLedgerName: string = '';
-
-  constructor(
-    public router: Router,
-    private ledgerService: LedgerService
-  ) {
+  constructor(public router: Router) {
+    // 👇 SUBSCRIPTION: Listen for URL changes
+    // This ensures that if you switch ledgers, the sidebar links update immediately.
     this.router.events.pipe(
       filter((event: Event): event is NavigationEnd => event instanceof NavigationEnd)
     ).subscribe(() => {
@@ -32,10 +32,27 @@ export class SidebarComponent implements OnInit {
   } 
 
   ngOnInit() {
-    this.checkScreenSize(); // 👈 Check screen size on load
+    this.loadUser();
+    this.checkScreenSize();
+    this.checkLedgerContext(); // Run check immediately on load
+  }
 
-    const userString = localStorage.getItem('user');
+  // 👇 LOGIC: Parse URL to find /ledgers/{id}
+  checkLedgerContext() {
+    const url = this.router.url;
+    // Regex to find the ID after 'ledgers/'
+    const match = url.match(/\/(ledger|accounts)\/(\d+)/);
     
+    if (match) {
+    this.ledgerId = match[2];
+    } else {
+      // If we are on the Dashboard or Login, clear the ID
+      this.ledgerId = null; 
+    }
+  }
+
+  loadUser() {
+    const userString = localStorage.getItem('user');
     if (userString) {
       try {
         const user = JSON.parse(userString);
@@ -45,59 +62,33 @@ export class SidebarComponent implements OnInit {
         console.error('Error parsing user data', e);
       }
     }
-
-    this.checkLedgerContext();
   }
 
-  // 👈 Restored: Listen for window resizing
+  // 👇 RESPONSIVE: Auto-collapse on mobile
   @HostListener('window:resize', [])
   onResize() {
     this.checkScreenSize();
   }
 
-  // 👈 Restored: Logic to auto-collapse/expand based on screen size
   checkScreenSize() {
     const wasMobile = this.isMobile;
     this.isMobile = window.innerWidth < 768; // Tailwind 'md' breakpoint
 
+    // If we just switched TO mobile, collapse the sidebar
     if (this.isMobile && !wasMobile) {
         this.isExpanded = false;
     }
+    // If we just switched TO desktop, expand it
     if (!this.isMobile && wasMobile) {
         this.isExpanded = true;
     }
-  }
-
-  checkLedgerContext() {
-    const url = this.router.url;
-    const match = url.match(/\/ledgers\/(\d+)/);
-    
-    if (match) {
-      const newId = match[1];
-      if (this.ledgerId !== newId) {
-          this.ledgerId = newId;
-          this.fetchLedgerName(newId);
-      }
-    } else {
-      this.ledgerId = null; 
-      this.activeLedgerName = '';
-    }
-  }
-
-  fetchLedgerName(id: string) {
-      this.ledgerService.getCompanyInfo(id).subscribe({
-          next: (ledger: any) => {
-              this.activeLedgerName = ledger.name;
-          },
-          error: () => this.activeLedgerName = 'Ledger'
-      });
   }
 
   toggleSidebar() {
     this.isExpanded = !this.isExpanded;
   }
 
-  // 👈 RESTORED: The method your HTML was looking for!
+  // Helper for HTML: Close sidebar when clicking a link on mobile
   closeOnMobile() {
     if (this.isMobile) {
         this.isExpanded = false;

@@ -20,7 +20,7 @@ class DashboardController extends Controller
         // 2. Calculate Totals from Journal Entries (The Real Math)
         // We join 'entry_items' with 'groups' to check the account code (1xxx, 2xxx, etc.)
         $items = DB::table('entry_items')
-            ->join('groups', 'entry_items.group_id', '=', 'groups.id')
+            ->join('groups', 'entry_items.ledger_id', '=', 'groups.id')
             ->where('groups.user_id', $user_id)
             ->select('groups.code', 'entry_items.dc', 'entry_items.amount')
             ->get();

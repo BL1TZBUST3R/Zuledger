@@ -6,12 +6,29 @@
             <p class="text-sm text-slate-500 mt-1">Manage your financial structure</p>
         </div>
         
-        <button (click)="openCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm">
-            <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Create Account
-        </button>
+        <div class="flex items-center gap-3">
+            <button (click)="openImportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center border border-slate-300">
+                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import Excel
+            </button>
+
+            <button (click)="exportCOA()" [disabled]="isExporting" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center border border-slate-300">
+                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span *ngIf="!isExporting">Export Excel</span>
+                <span *ngIf="isExporting">Exporting...</span>
+            </button>
+
+            <button (click)="openCreateModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center shadow-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Create Account
+            </button>
+        </div>
     </div>
 
     <div class="overflow-x-auto flex-1">
@@ -95,29 +112,73 @@
         </div>
 
         <div class="p-6 space-y-4">
-            
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">Parent Group</label>
-                <select [(ngModel)]="newAccount.parent_id" 
-        (change)="onParentChange()" 
-        class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
-    <option value="" disabled selected>Select a group...</option>
-    <option *ngFor="let group of groups" [value]="group.id">
-        {{ group.code }} - {{ group.name }}
-    </option>
-</select>
-            </div>
-
             <div>
                 <label class="block text-sm font-bold text-slate-700 mb-1">Account Name</label>
-                <input [(ngModel)]="newAccount.name" type="text" placeholder="e.g. Petty Cash" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+                <input [(ngModel)]="newAccount.name" type="text" placeholder="e.g. Petty Cash" 
+                       class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+            </div>
+
+           <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Account Code</label>
+                <input [value]="newAccount.code" type="text" readonly
+                       class="w-full border-slate-200 rounded-lg p-2.5 border bg-slate-50 text-slate-500 font-mono cursor-not-allowed">
+                <p class="text-xs text-slate-400 mt-1">Auto-generated based on account type</p>
             </div>
 
             <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1">Account Code</label>
-                <input [(ngModel)]="newAccount.code" type="text" placeholder="e.g. 1010" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border">
+                <label class="block text-sm font-bold text-slate-700 mb-1">Account Type</label>
+                <select [(ngModel)]="newAccount.account_type" (change)="onAccountTypeChange()"
+                        class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+                    <option value="" disabled selected>Select type...</option>
+                    <option value="asset">Asset</option>
+                    <option value="liability">Liability</option>
+                    <option value="equity">Equity</option>
+                    <option value="revenue">Revenue</option>
+                    <option value="expense">Expense</option>
+                </select>
             </div>
 
+            <div *ngIf="showSubtype">
+                <label class="block text-sm font-bold text-slate-700 mb-1">Sub-type</label>
+                <select [(ngModel)]="newAccount.account_subtype"
+                        class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+                    <option value="" disabled selected>Select sub-type...</option>
+                    <ng-container *ngIf="newAccount.account_type === 'asset' || newAccount.account_type === 'liability'">
+                        <option value="current">Current</option>
+                        <option value="non-current">Non-Current</option>
+                    </ng-container>
+                    <ng-container *ngIf="newAccount.account_type === 'revenue' || newAccount.account_type === 'expense'">
+                        <option value="direct">Direct</option>
+                        <option value="indirect">Indirect</option>
+                    </ng-container>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Cash Flow Type</label>
+                <select [(ngModel)]="newAccount.cashflow_type"
+                        class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+                    <option value="" disabled selected>Select cash flow...</option>
+                    <option value="operating">Operating Activities</option>
+                    <option value="investing">Investing Activities</option>
+                    <option value="financing">Financing Activities</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Normal Balance</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" [(ngModel)]="newAccount.normal_balance" value="DR" name="normal_balance">
+                        <span class="text-sm text-slate-700">Debit (DR)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" [(ngModel)]="newAccount.normal_balance" value="CR" name="normal_balance">
+                        <span class="text-sm text-slate-700">Credit (CR)</span>
+                    </label>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">{{ normalBalanceHint }}</p>
+            </div>
         </div>
 
         <div class="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
@@ -127,6 +188,56 @@
                 <span *ngIf="!isSaving">Create Account</span>
             </button>
         </div>
+    </div>
+</div>
 
+<div *ngIf="showImportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+        
+        <div class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-slate-800">Import Chart of Accounts</h3>
+            <button (click)="closeImportModal()" class="text-slate-400 hover:text-red-500">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Excel File</label>
+                <input type="file" accept=".xlsx,.xls" (change)="onFileSelected($event)" 
+                       class="w-full border border-slate-300 rounded-lg p-2 text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Import Mode</label>
+                <select [(ngModel)]="importMode" class="w-full border-slate-300 rounded-lg p-2.5 focus:ring-blue-500 border bg-white">
+                    <option value="add">Add to existing accounts</option>
+                    <option value="replace">Replace all accounts</option>
+                </select>
+                <p *ngIf="importMode === 'replace'" class="text-xs text-red-500 mt-1 font-medium">Warning: This will delete all existing accounts in this ledger first.</p>
+            </div>
+
+            <div *ngIf="importErrors.length > 0" class="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p class="text-sm font-bold text-red-700 mb-1">Import Errors:</p>
+                <ul class="text-xs text-red-600 space-y-1 max-h-32 overflow-y-auto">
+                    <li *ngFor="let error of importErrors">{{ error }}</li>
+                </ul>
+            </div>
+
+            <div *ngIf="importSuccess" class="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p class="text-sm font-bold text-green-700">Successfully imported {{ importedCount }} accounts.</p>
+            </div>
+        </div>
+
+        <div class="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
+            <button (click)="closeImportModal()" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium">Cancel</button>
+            <button (click)="importCOA()" [disabled]="isImporting || !selectedFile" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-all disabled:opacity-50">
+                <span *ngIf="isImporting">Importing...</span>
+                <span *ngIf="!isImporting">Import</span>
+            </button>
+        </div>
     </div>
 </div>

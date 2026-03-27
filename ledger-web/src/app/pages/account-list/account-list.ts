@@ -1,13 +1,19 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, ActivatedRoute } from '@angular/router'; // 👈 Import ActivatedRoute
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { AccountService } from '../../services/account'; // 👈 Use the Service
+import { AccountService } from '../../services/account';
+import { ActiveLedgerService } from '../../services/active-ledger.service';
+import { LedgerService } from '../../services/ledger.service';
 
 interface Group {
   id: number;
   name: string;
   code: string;
+  account_type?: string;
+  account_subtype?: string;
+  cashflow_type?: string;
+  normal_balance?: string;
   children?: Group[];
 }
 
@@ -23,47 +29,80 @@ export class AccountListComponent implements OnInit {
   isLoading: boolean = true;
   showModal: boolean = false;
   isSaving: boolean = false;
-  ledgerId: string | null = null; // 👈 Store the ID
+  isExporting: boolean = false;
+  showImportModal: boolean = false;
+  isImporting: boolean = false;
+  importMode: string = 'add';
+  selectedFile: File | null = null;
+  importErrors: string[] = [];
+  importSuccess: boolean = false;
+  importedCount: number = 0;
+  showSubtype: boolean = false;
+  ledgerId: string | null = null;
 
   newAccount = {
     parent_id: '',
     name: '',
-    code: ''
+    code: '',
+    account_type: '',
+    account_subtype: '',
+    cashflow_type: '',
+    normal_balance: ''
   };
 
+  get normalBalanceHint(): string {
+    switch (this.newAccount.account_type) {
+      case 'asset':    return 'Assets normally have a Debit (DR) balance';
+      case 'expense':  return 'Expenses normally have a Debit (DR) balance';
+      case 'liability': return 'Liabilities normally have a Credit (CR) balance';
+      case 'equity':   return 'Equity normally has a Credit (CR) balance';
+      case 'revenue':  return 'Revenue normally has a Credit (CR) balance';
+      default:         return 'Select an account type for guidance';
+    }
+  }
+
   constructor(
-    private accountService: AccountService, // 👈 Inject Service
+    private accountService: AccountService,
     private cdr: ChangeDetectorRef,
-    private route: ActivatedRoute // 👈 Inject Route
+    private route: ActivatedRoute,
+    private activeLedger: ActiveLedgerService,
+    private ledgerService: LedgerService
   ) {}
 
   ngOnInit() {
-    // 1. Get the ID from the URL (defined in app.routes.ts as 'ledgers/:ledgerId')
-    this.ledgerId = this.route.snapshot.paramMap.get('ledgerId');
-    
+    this.ledgerId = this.route.snapshot.paramMap.get('id');
     if (this.ledgerId) {
       this.fetchGroups(this.ledgerId);
+      this.loadLedgerName(this.ledgerId);
     } else {
-        console.error("No Ledger ID found!");
-        this.isLoading = false;
+      console.error('No Ledger ID found!');
+      this.isLoading = false;
     }
+  }
+
+  loadLedgerName(id: string) {
+    this.ledgerService.getLedger(id).subscribe({
+      next: (data: any) => {
+        this.activeLedger.set(data.account?.name || data.name || 'Ledger');
+      },
+      error: (err: any) => console.error(err)
+    });
   }
 
   fetchGroups(id: string) {
     this.accountService.getGroups(id).subscribe({
-      next: (data) => {
+      next: (data: any) => {
         this.groups = data;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         this.isLoading = false;
       }
     });
   }
 
-  // Automation Logic (Kept same)
   onParentChange() {
     const parentId = Number(this.newAccount.parent_id);
     const selectedParent = this.groups.find(g => g.id === parentId);
@@ -80,9 +119,60 @@ export class AccountListComponent implements OnInit {
     }
   }
 
+ onAccountTypeChange() {
+    const type = this.newAccount.account_type;
+    this.showSubtype = ['asset', 'liability', 'revenue', 'expense'].includes(type);
+    this.newAccount.account_subtype = '';
+
+    if (type === 'asset' || type === 'expense') {
+      this.newAccount.normal_balance = 'DR';
+    } else if (type === 'liability' || type === 'equity' || type === 'revenue') {
+      this.newAccount.normal_balance = 'CR';
+    }
+
+    // Auto-generate code based on account type
+    this.newAccount.code = this.generateNextCode(type);
+  }
+
+  generateNextCode(type: string): string {
+    const baseMap: { [key: string]: number } = {
+      'asset': 1000,
+      'liability': 2000,
+      'equity': 3000,
+      'revenue': 4000,
+      'expense': 5000,
+    };
+
+    const base = baseMap[type];
+    if (!base) return '';
+
+    // Collect all existing codes in this range
+    const existingCodes: number[] = [];
+    this.groups.forEach((group: Group) => {
+      const code = parseInt(group.code);
+      if (code >= base && code < base + 1000) {
+        existingCodes.push(code);
+      }
+      if (group.children) {
+        group.children.forEach((child: Group) => {
+          const childCode = parseInt(child.code);
+          if (childCode >= base && childCode < base + 1000) {
+            existingCodes.push(childCode);
+          }
+        });
+      }
+    });
+
+    if (existingCodes.length === 0) return base.toString();
+
+    const maxCode = Math.max(...existingCodes);
+    return (maxCode + 1).toString();
+  }
+
   openCreateModal() {
     this.showModal = true;
-    this.newAccount = { parent_id: '', name: '', code: '' };
+    this.showSubtype = false;
+    this.newAccount = { parent_id: '', name: '', code: '', account_type: '', account_subtype: '', cashflow_type: '', normal_balance: '' };
   }
 
   closeModal() {
@@ -90,21 +180,89 @@ export class AccountListComponent implements OnInit {
   }
 
   createAccount() {
-    if (!this.newAccount.parent_id || !this.newAccount.name || !this.newAccount.code || !this.ledgerId) return;
+    if (!this.newAccount.name || !this.newAccount.code || 
+        !this.newAccount.account_type || !this.newAccount.normal_balance || !this.ledgerId) return;
 
     this.isSaving = true;
 
-    // Use the Service to create
     this.accountService.createGroup(this.ledgerId, this.newAccount).subscribe({
       next: () => {
-        this.fetchGroups(this.ledgerId!); 
+        this.fetchGroups(this.ledgerId!);
         this.closeModal();
         this.isSaving = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error(err);
         alert('Failed to create account.');
         this.isSaving = false;
+      }
+    });
+  }
+
+  openImportModal() {
+    this.showImportModal = true;
+    this.selectedFile = null;
+    this.importErrors = [];
+    this.importSuccess = false;
+    this.importedCount = 0;
+    this.importMode = 'add';
+  }
+
+  closeImportModal() {
+    this.showImportModal = false;
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile = input.files?.[0] || null;
+    this.importErrors = [];
+    this.importSuccess = false;
+  }
+
+  exportCOA() {
+    if (!this.ledgerId) return;
+
+    this.isExporting = true;
+
+    this.accountService.exportGroups(this.ledgerId).subscribe({
+      next: (blob: Blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chart_of_accounts.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.isExporting = false;
+      },
+      error: (err: any) => {
+        console.error('Export failed', err);
+        alert('Failed to export Chart of Accounts.');
+        this.isExporting = false;
+      }
+    });
+  }
+
+  importCOA() {
+    if (!this.ledgerId || !this.selectedFile) return;
+
+    this.isImporting = true;
+    this.importErrors = [];
+    this.importSuccess = false;
+
+    this.accountService.importGroups(this.ledgerId, this.selectedFile, this.importMode).subscribe({
+      next: (result: any) => {
+        this.importSuccess = true;
+        this.importedCount = result.imported;
+        this.fetchGroups(this.ledgerId!);
+        this.isImporting = false;
+      },
+      error: (err: any) => {
+        if (err.error && err.error.errors) {
+          this.importErrors = err.error.errors;
+        } else {
+          this.importErrors = ['An unexpected error occurred.'];
+        }
+        this.isImporting = false;
       }
     });
   }

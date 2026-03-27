@@ -1,115 +1,244 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { JournalService } from '../../services/journal';
+import { AccountService } from '../../services/account';
+
+interface JournalLine {
+  group_id: number;
+  amount: number;
+  type: string;
+  account?: { id: number; name: string; code: string };
+}
+
+interface Journal {
+  id: number;
+  journal_number: number;
+  description: string;
+  date: string;
+  status: string;
+  lines: JournalLine[];
+  user?: { name: string };
+}
+
+interface Account {
+  id: number;
+  name: string;
+  code: string;
+  children?: Account[];
+}
 
 @Component({
   selector: 'app-journal-entry',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './journal-entry.html', // Point to the HTML file
+  imports: [CommonModule, RouterModule, FormsModule],
+  templateUrl: './journal-entry.html',
 })
 export class JournalEntryComponent implements OnInit {
-  
-  entryForm: FormGroup;
-  groups: any[] = []; // List of accounts for the dropdown
-  isLoading = false;
-  
-  // Totals for the bottom of the screen
-  totalDr = 0;
-  totalCr = 0;
-  isBalanced = true;
+
+  journals: Journal[] = [];
+  accounts: Account[] = [];
+  flatAccounts: Account[] = [];
+  isLoading: boolean = true;
+  ledgerId: string | null = null;
+
+  showModal: boolean = false;
+  isEditing: boolean = false;
+  isSaving: boolean = false;
+  editingJournalId: string | null = null;
+
+  newJournal = {
+    description: '',
+    date: '',
+    lines: [
+      { group_id: '', amount: '', type: 'DR' },
+      { group_id: '', amount: '', type: 'CR' },
+    ] as any[]
+  };
+
+  get totalDR(): number {
+    return this.newJournal.lines
+      .filter((l: any) => l.type === 'DR')
+      .reduce((sum: number, l: any) => sum + (parseFloat(l.amount) || 0), 0);
+  }
+
+  get totalCR(): number {
+    return this.newJournal.lines
+      .filter((l: any) => l.type === 'CR')
+      .reduce((sum: number, l: any) => sum + (parseFloat(l.amount) || 0), 0);
+  }
+
+  get isBalanced(): boolean {
+    return Math.abs(this.totalDR - this.totalCR) < 0.01 && this.totalDR > 0;
+  }
+
+  get difference(): number {
+    return Math.abs(this.totalDR - this.totalCR);
+  }
 
   constructor(
-    private fb: FormBuilder,
-    private http: HttpClient,
-    private router: Router
-  ) {
-    // 1. Initialize the Form
-    this.entryForm = this.fb.group({
-      date: [new Date().toISOString().split('T')[0], Validators.required], // Default to today
-      narration: ['', Validators.required],
-      items: this.fb.array([]) // Start with an empty list of rows
-    });
-  }
+    private journalService: JournalService,
+    private accountService: AccountService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit() {
-    this.fetchAccounts();
-    this.addDefaultRows(); // Add 2 empty rows to start
+    this.ledgerId = this.route.snapshot.paramMap.get('id');
+    if (this.ledgerId) {
+      this.fetchJournals();
+      this.fetchAccounts();
+    }
   }
 
-  // 👇 2. Getter for easier access in HTML
-  get items() {
-    return this.entryForm.get('items') as FormArray;
+  fetchJournals() {
+    if (!this.ledgerId) return;
+    this.journalService.getJournals(this.ledgerId).subscribe({
+      next: (data: any) => {
+        this.journals = data;
+        this.isLoading = false;
+      },
+      error: (err: any) => {
+        console.error(err);
+        this.isLoading = false;
+      }
+    });
   }
 
-  // 👇 3. Fetch Accounts for the Dropdown
   fetchAccounts() {
-    this.http.get<any[]>('http://localhost:8000/api/groups').subscribe(data => {
-      this.groups = data;
+    if (!this.ledgerId) return;
+    this.accountService.getGroups(this.ledgerId).subscribe({
+      next: (data: any) => {
+        this.accounts = data;
+        this.flatAccounts = [];
+        data.forEach((group: any) => {
+          if (group.children && group.children.length > 0) {
+            group.children.forEach((child: any) => {
+              this.flatAccounts.push(child);
+            });
+          } else {
+            this.flatAccounts.push(group);
+          }
+        });
+      },
+      error: (err: any) => console.error(err)
     });
   }
 
-  // 👇 4. Add a New Row (Debit/Credit Line)
-  addItem() {
-    const row = this.fb.group({
-      group_id: ['', Validators.required], // Account ID
-      dc: ['D', Validators.required],      // Debit or Credit
-      amount: [0, [Validators.required, Validators.min(0.01)]]
+  openCreateModal() {
+    this.showModal = true;
+    this.isEditing = false;
+    this.editingJournalId = null;
+    this.newJournal = {
+      description: '',
+      date: new Date().toISOString().split('T')[0],
+      lines: [
+        { group_id: '', amount: '', type: 'DR' },
+        { group_id: '', amount: '', type: 'CR' },
+      ]
+    };
+  }
+
+  openEditModal(journal: Journal) {
+    if (journal.status === 'posted') return;
+
+    this.showModal = true;
+    this.isEditing = true;
+    this.editingJournalId = journal.id.toString();
+    this.newJournal = {
+      description: journal.description || '',
+      date: journal.date.split('T')[0],
+      lines: journal.lines.map((l: any) => ({
+        group_id: l.group_id || (l.account ? l.account.id : ''),
+        amount: l.amount.toString(),
+        type: l.type
+      }))
+    };
+  }
+
+  closeModal() {
+    this.showModal = false;
+  }
+
+  addLine() {
+    this.newJournal.lines.push({ group_id: '', amount: '', type: 'DR' });
+  }
+
+  removeLine(index: number) {
+    if (this.newJournal.lines.length > 2) {
+      this.newJournal.lines.splice(index, 1);
+    }
+  }
+
+  saveJournal() {
+    if (!this.ledgerId || !this.isBalanced) return;
+
+    this.isSaving = true;
+
+    const payload = {
+      description: this.newJournal.description,
+      date: this.newJournal.date,
+      lines: this.newJournal.lines.map((l: any) => ({
+        group_id: parseInt(l.group_id),
+        amount: parseFloat(l.amount),
+        type: l.type
+      }))
+    };
+
+    const request = this.isEditing && this.editingJournalId
+      ? this.journalService.updateJournal(this.ledgerId, this.editingJournalId, payload)
+      : this.journalService.createJournal(this.ledgerId, payload);
+
+    request.subscribe({
+      next: () => {
+        this.fetchJournals();
+        this.closeModal();
+        this.isSaving = false;
+      },
+      error: (err: any) => {
+        console.error(err);
+        alert(err.error?.message || 'Failed to save journal.');
+        this.isSaving = false;
+      }
     });
-
-    // Listen for changes to update totals immediately
-    row.valueChanges.subscribe(() => this.calculateTotals());
-    
-    this.items.push(row);
   }
 
-  addDefaultRows() {
-    this.addItem(); // Row 1
-    this.addItem(); // Row 2
-  }
-
-  // 👇 5. Remove a Row
-  removeItem(index: number) {
-    this.items.removeAt(index);
-    this.calculateTotals();
-  }
-
-  // 👇 6. Live Math Calculation
-  calculateTotals() {
-    this.totalDr = 0;
-    this.totalCr = 0;
-
-    const rows = this.entryForm.value.items;
-    
-    rows.forEach((row: any) => {
-      const val = parseFloat(row.amount) || 0;
-      if (row.dc === 'D') this.totalDr += val;
-      if (row.dc === 'C') this.totalCr += val;
+  postJournal(journal: Journal) {
+    if (!this.ledgerId) return;
+    this.journalService.postJournal(this.ledgerId, journal.id.toString()).subscribe({
+      next: () => this.fetchJournals(),
+      error: (err: any) => alert(err.error?.message || 'Failed to post journal.')
     });
-
-    // Check if balanced (allowing for tiny floating point errors)
-    this.isBalanced = Math.abs(this.totalDr - this.totalCr) < 0.01;
   }
 
-  // 👇 7. Submit to Backend
-  onSubmit() {
-    if (this.entryForm.invalid || !this.isBalanced) return;
+  unpostJournal(journal: Journal) {
+    if (!this.ledgerId) return;
+    this.journalService.unpostJournal(this.ledgerId, journal.id.toString()).subscribe({
+      next: () => this.fetchJournals(),
+      error: (err: any) => alert(err.error?.message || 'Failed to unpost journal.')
+    });
+  }
 
-    this.isLoading = true;
-    
-    this.http.post('http://localhost:8000/api/entries', this.entryForm.value)
-      .subscribe({
-        next: () => {
-          alert('Entry Saved!');
-          this.router.navigate(['/dashboard']);
-        },
-        error: (err) => {
-          console.error(err);
-          alert('Error saving entry: ' + (err.error.message || 'Unknown error'));
-          this.isLoading = false;
-        }
-      });
+  deleteJournal(journal: Journal) {
+    if (!this.ledgerId || journal.status === 'posted') return;
+    if (!confirm('Are you sure you want to delete this journal entry?')) return;
+
+    this.journalService.deleteJournal(this.ledgerId, journal.id.toString()).subscribe({
+      next: () => this.fetchJournals(),
+      error: (err: any) => alert(err.error?.message || 'Failed to delete journal.')
+    });
+  }
+
+  getLineSummary(journal: Journal): string {
+    const totalDR = journal.lines
+      .filter((l: any) => l.type === 'DR')
+      .reduce((sum: number, l: any) => sum + parseFloat(l.amount), 0);
+    return totalDR.toFixed(2);
+  }
+
+  getAccountName(line: JournalLine): string {
+    if (line.account) return `${line.account.code} - ${line.account.name}`;
+    const found = this.flatAccounts.find((a: any) => a.id === line.group_id);
+    return found ? `${found.code} - ${found.name}` : 'Unknown';
   }
 }
