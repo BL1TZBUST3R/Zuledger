@@ -40,8 +40,8 @@ export class JournalService {
     return this.http.patch(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}/post`, {}, this.getHeaders());
   }
 
-  unpostJournal(ledgerId: string, journalId: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}/unpost`, {}, this.getHeaders());
+ reverseJournal(ledgerId: string, journalId: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}/reverse`, {}, this.getHeaders());
   }
 
   deleteJournal(ledgerId: string, journalId: string): Observable<any> {

@@ -211,11 +211,13 @@ export class JournalEntryComponent implements OnInit {
     });
   }
 
-  unpostJournal(journal: Journal) {
+ reverseJournal(journal: Journal) {
     if (!this.ledgerId) return;
-    this.journalService.unpostJournal(this.ledgerId, journal.id.toString()).subscribe({
+    if (!confirm('This will create a new reversal journal with flipped debits and credits. Continue?')) return;
+
+    this.journalService.reverseJournal(this.ledgerId, journal.id.toString()).subscribe({
       next: () => this.fetchJournals(),
-      error: (err: any) => alert(err.error?.message || 'Failed to unpost journal.')
+      error: (err: any) => alert(err.error?.message || 'Failed to reverse journal.')
     });
   }
 

@@ -59,8 +59,8 @@
                                     class="text-blue-600 hover:text-blue-800 text-xs font-bold uppercase">Edit</button>
                             <button *ngIf="journal.status === 'draft'" (click)="postJournal(journal)"
                                     class="text-green-600 hover:text-green-800 text-xs font-bold uppercase">Post</button>
-                            <button *ngIf="journal.status === 'posted'" (click)="unpostJournal(journal)"
-                                    class="text-yellow-600 hover:text-yellow-800 text-xs font-bold uppercase">Unpost</button>
+                         <button *ngIf="journal.status === 'posted'" (click)="reverseJournal(journal)"
+                                    class="text-yellow-600 hover:text-yellow-800 text-xs font-bold uppercase">Reverse</button>
                             <button *ngIf="journal.status === 'draft'" (click)="deleteJournal(journal)"
                                     class="text-red-600 hover:text-red-800 text-xs font-bold uppercase">Delete</button>
                         </div>

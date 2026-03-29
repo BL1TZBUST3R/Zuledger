@@ -35,7 +35,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/ledgers/{id}/journals', [App\Http\Controllers\JournalController::class, 'store']);
     Route::put('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'update']);
     Route::patch('/ledgers/{id}/journals/{journalId}/post', [App\Http\Controllers\JournalController::class, 'post']);
-    Route::patch('/ledgers/{id}/journals/{journalId}/unpost', [App\Http\Controllers\JournalController::class, 'unpost']);
+    Route::patch('/ledgers/{id}/journals/{journalId}/reverse', [App\Http\Controllers\JournalController::class, 'reverse']);
     Route::delete('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'destroy']);
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
     Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);

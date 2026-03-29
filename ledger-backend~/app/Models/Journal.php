@@ -36,4 +36,9 @@ class Journal extends Model
     {
         return $this->hasMany(JournalLine::class);
     }
+    
+    public function auditLogs()
+    {
+        return $this->hasMany(JournalAuditLog::class);
+    }
 }

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use App\Models\Journal;
 use App\Models\JournalLine;
+use App\Models\JournalAuditLog;
 use App\Models\Ledger;
 
 class JournalController extends Controller
@@ -20,7 +21,7 @@ class JournalController extends Controller
         $this->authorize('view', $ledger);
 
         $journals = Journal::where('ledger_id', $ledgerId)
-            ->with(['lines.account', 'user'])
+            ->with(['lines.account', 'user', 'auditLogs.user'])
             ->orderBy('journal_number', 'desc')
             ->get();
 
@@ -34,7 +35,7 @@ class JournalController extends Controller
 
         $journal = Journal::where('ledger_id', $ledgerId)
             ->where('id', $journalId)
-            ->with(['lines.account', 'user'])
+            ->with(['lines.account', 'user', 'auditLogs.user'])
             ->firstOrFail();
 
         return response()->json($journal);
@@ -104,11 +105,18 @@ class JournalController extends Controller
                 ]);
             }
 
+            JournalAuditLog::create([
+                'journal_id' => $journal->id,
+                'user_id'    => Auth::id(),
+                'action'     => 'created',
+                'details'    => ['description' => $request->description, 'date' => $request->date],
+            ]);
+
             return $journal;
         });
 
         return response()->json(
-            $journal->load(['lines.account', 'user']),
+            $journal->load(['lines.account', 'user', 'auditLogs.user']),
             201
         );
     }
@@ -166,7 +174,16 @@ class JournalController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($request, $journal) {
+        // Capture old state for audit
+        $oldData = [
+            'description' => $journal->description,
+            'date' => $journal->date->toDateString(),
+            'lines' => $journal->lines->map(function ($l) {
+                return ['group_id' => $l->group_id, 'amount' => $l->amount, 'type' => $l->type];
+            })->toArray(),
+        ];
+
+        DB::transaction(function () use ($request, $journal, $oldData) {
             $journal->update([
                 'description' => $request->description,
                 'date'        => $request->date,
@@ -182,10 +199,21 @@ class JournalController extends Controller
                     'type'       => $line['type'],
                 ]);
             }
+
+            JournalAuditLog::create([
+                'journal_id' => $journal->id,
+                'user_id'    => Auth::id(),
+                'action'     => 'edited',
+                'details'    => ['before' => $oldData, 'after' => [
+                    'description' => $request->description,
+                    'date' => $request->date,
+                    'lines' => $request->lines,
+                ]],
+            ]);
         });
 
         return response()->json(
-            $journal->fresh()->load(['lines.account', 'user'])
+            $journal->fresh()->load(['lines.account', 'user', 'auditLogs.user'])
         );
     }
 
@@ -204,25 +232,75 @@ class JournalController extends Controller
 
         $journal->update(['status' => 'posted']);
 
-        return response()->json($journal->load(['lines.account', 'user']));
+        JournalAuditLog::create([
+            'journal_id' => $journal->id,
+            'user_id'    => Auth::id(),
+            'action'     => 'posted',
+            'details'    => null,
+        ]);
+
+        return response()->json($journal->load(['lines.account', 'user', 'auditLogs.user']));
     }
 
-    public function unpost($ledgerId, $journalId)
+    public function reverse($ledgerId, $journalId)
     {
         $ledger = Ledger::findOrFail($ledgerId);
         $this->authorize('update', $ledger);
 
         $journal = Journal::where('ledger_id', $ledgerId)
             ->where('id', $journalId)
+            ->with('lines')
             ->firstOrFail();
 
-        if ($journal->status === 'draft') {
-            return response()->json(['message' => 'Journal is already a draft.'], 422);
+        if ($journal->status !== 'posted') {
+            return response()->json(['message' => 'Only posted journals can be reversed.'], 422);
         }
 
-        $journal->update(['status' => 'draft']);
+        $nextNumber = Journal::where('ledger_id', $ledgerId)->max('journal_number') + 1;
 
-        return response()->json($journal->load(['lines.account', 'user']));
+        $reversal = DB::transaction(function () use ($journal, $ledgerId, $nextNumber) {
+            // Create a new reversal journal with flipped DR/CR
+            $reversal = Journal::create([
+                'ledger_id'      => $ledgerId,
+                'user_id'        => Auth::id(),
+                'journal_number' => $nextNumber,
+                'description'    => 'Reversal of J#' . $journal->journal_number . ': ' . ($journal->description ?? ''),
+                'date'           => now()->toDateString(),
+                'status'         => 'posted',
+            ]);
+
+            foreach ($journal->lines as $line) {
+                JournalLine::create([
+                    'journal_id' => $reversal->id,
+                    'group_id'   => $line->group_id,
+                    'amount'     => $line->amount,
+                    'type'       => $line->type === 'DR' ? 'CR' : 'DR',
+                ]);
+            }
+
+            // Log audit on the original journal
+            JournalAuditLog::create([
+                'journal_id' => $journal->id,
+                'user_id'    => Auth::id(),
+                'action'     => 'reversed',
+                'details'    => ['reversal_journal_id' => $reversal->id, 'reversal_journal_number' => $nextNumber],
+            ]);
+
+            // Log audit on the reversal journal
+            JournalAuditLog::create([
+                'journal_id' => $reversal->id,
+                'user_id'    => Auth::id(),
+                'action'     => 'created',
+                'details'    => ['reversal_of_journal_id' => $journal->id, 'reversal_of_journal_number' => $journal->journal_number],
+            ]);
+
+            return $reversal;
+        });
+
+        return response()->json(
+            $reversal->load(['lines.account', 'user', 'auditLogs.user']),
+            201
+        );
     }
 
     public function destroy($ledgerId, $journalId)
@@ -235,8 +313,15 @@ class JournalController extends Controller
             ->firstOrFail();
 
         if ($journal->status === 'posted') {
-            return response()->json(['message' => 'Cannot delete a posted journal entry.'], 422);
+            return response()->json(['message' => 'Cannot delete a posted journal. Use reverse instead.'], 422);
         }
+
+        JournalAuditLog::create([
+            'journal_id' => $journal->id,
+            'user_id'    => Auth::id(),
+            'action'     => 'deleted',
+            'details'    => null,
+        ]);
 
         $journal->delete();
 
