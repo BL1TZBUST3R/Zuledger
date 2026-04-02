@@ -1,0 +1,482 @@
+<div class="bg-white rounded-lg shadow-sm border border-slate-200 h-full flex flex-col print:shadow-none print:border-none">
+
+  <!-- Header -->
+  <div class="p-6 border-b border-slate-100 print:pb-2">
+    <div class="flex justify-between items-start">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800">Reports</h2>
+        <p class="text-sm text-slate-500 mt-1">Financial statements and analysis</p>
+      </div>
+      <div class="flex gap-2 print:hidden">
+        <button *ngIf="reportData" (click)="exportCsv()"
+                class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Export CSV
+        </button>
+        <button *ngIf="reportData" (click)="printReport()"
+                class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-800 transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print / PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="border-b border-slate-200 px-6 print:hidden">
+    <nav class="flex gap-1 -mb-px overflow-x-auto">
+      <button *ngFor="let tab of tabs"
+              (click)="setTab(tab.id)"
+              [class.border-blue-600]="activeTab === tab.id"
+              [class.text-blue-600]="activeTab === tab.id"
+              [class.border-transparent]="activeTab !== tab.id"
+              [class.text-slate-500]="activeTab !== tab.id"
+              class="px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors hover:text-slate-700">
+        {{ tab.label }}
+      </button>
+    </nav>
+  </div>
+
+  <!-- Filters -->
+  <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 print:hidden">
+    <div class="flex flex-wrap items-end gap-4">
+
+      <div *ngIf="usesAsAt()">
+        <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">As at Date</label>
+        <input [(ngModel)]="asAt" type="date"
+               class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <div *ngIf="usesDateRange()">
+        <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">From</label>
+        <input [(ngModel)]="from" type="date"
+               class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <div *ngIf="usesDateRange()">
+        <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">To</label>
+        <input [(ngModel)]="to" type="date"
+               class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      <div *ngIf="activeTab === 'journal-report'">
+        <label class="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">Status</label>
+        <select [(ngModel)]="journalStatus"
+                class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+          <option value="draft">Draft</option>
+          <option value="posted">Posted</option>
+        </select>
+      </div>
+
+      <button (click)="runReport()" [disabled]="isLoading"
+              class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2">
+        <svg *ngIf="!isLoading" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <svg *ngIf="isLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        {{ isLoading ? 'Loading...' : 'Run Report' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Report Output -->
+  <div class="flex-1 overflow-auto p-6">
+
+    <!-- Error -->
+    <div *ngIf="errorMessage" class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Empty state -->
+    <div *ngIf="!reportData && !isLoading && !errorMessage"
+         class="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+      <svg class="w-14 h-14 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <p class="text-sm font-medium">Select a report and click <strong>Run Report</strong> to generate results.</p>
+    </div>
+
+    <!-- ══════════════════════════════════
+         TRIAL BALANCE
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'trial-balance'">
+      <div class="mb-4 print:mb-2">
+        <h3 class="text-lg font-bold text-slate-800">Trial Balance</h3>
+        <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+      </div>
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
+            <th class="px-4 py-3 text-left border-b border-slate-200 w-24">Code</th>
+            <th class="px-4 py-3 text-left border-b border-slate-200">Account Name</th>
+            <th class="px-4 py-3 text-left border-b border-slate-200 w-32">Type</th>
+            <th class="px-4 py-3 text-right border-b border-slate-200 w-36">Debit</th>
+            <th class="px-4 py-3 text-right border-b border-slate-200 w-36">Credit</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr *ngFor="let row of reportData.rows" class="hover:bg-slate-50">
+            <td class="px-4 py-2.5 font-mono text-slate-600">{{ row.code }}</td>
+            <td class="px-4 py-2.5 text-slate-800">{{ row.name }}</td>
+            <td class="px-4 py-2.5 capitalize text-slate-500">{{ row.account_type }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ row.debit > 0 ? (row.debit | number:'1.2-2') : '' }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ row.credit > 0 ? (row.credit | number:'1.2-2') : '' }}</td>
+          </tr>
+          <tr *ngIf="reportData.rows.length === 0">
+            <td colspan="5" class="px-4 py-8 text-center text-slate-400">No transactions found for this period.</td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="bg-slate-50 font-bold border-t-2 border-slate-300">
+            <td class="px-4 py-3" colspan="3" class="text-right text-slate-700">Totals</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-900">{{ reportData.total_debit | number:'1.2-2' }}</td>
+            <td class="px-4 py-3 text-right font-mono text-slate-900">{{ reportData.total_credit | number:'1.2-2' }}</td>
+          </tr>
+          <tr *ngIf="reportData.total_debit !== reportData.total_credit">
+            <td colspan="5" class="px-4 py-2 text-center text-red-600 text-xs font-bold">
+              Warning: Trial balance does not balance. Difference: {{ (reportData.total_debit - reportData.total_credit) | number:'1.2-2' }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- ══════════════════════════════════
+         PROFIT & LOSS
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'profit-loss'">
+      <div class="mb-4">
+        <h3 class="text-lg font-bold text-slate-800">Profit &amp; Loss Statement</h3>
+        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      </div>
+
+      <!-- Revenue -->
+      <div class="mb-6">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">Revenue</h4>
+        <table class="w-full text-sm border-collapse">
+          <tbody class="divide-y divide-slate-100">
+            <tr *ngFor="let r of reportData.revenue" class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
+              <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+              <td class="px-4 py-2.5 text-right font-mono w-40 text-green-700">{{ r.balance | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="reportData.revenue.length === 0">
+              <td colspan="3" class="px-4 py-3 text-slate-400 text-center">No revenue accounts.</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-green-50 font-bold border-t border-green-200">
+              <td class="px-4 py-2.5" colspan="2">Total Revenue</td>
+              <td class="px-4 py-2.5 text-right font-mono text-green-700">{{ reportData.total_revenue | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Expenses -->
+      <div class="mb-6">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">Expenses</h4>
+        <table class="w-full text-sm border-collapse">
+          <tbody class="divide-y divide-slate-100">
+            <tr *ngFor="let r of reportData.expenses" class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
+              <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+              <td class="px-4 py-2.5 text-right font-mono w-40 text-red-700">{{ r.balance | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="reportData.expenses.length === 0">
+              <td colspan="3" class="px-4 py-3 text-slate-400 text-center">No expense accounts.</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-red-50 font-bold border-t border-red-200">
+              <td class="px-4 py-2.5" colspan="2">Total Expenses</td>
+              <td class="px-4 py-2.5 text-right font-mono text-red-700">{{ reportData.total_expenses | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Net Income -->
+      <div class="rounded-xl p-4 font-bold text-right text-base"
+           [class.bg-green-50]="reportData.net_income >= 0"
+           [class.bg-red-50]="reportData.net_income < 0">
+        <span class="text-slate-600 mr-4">Net {{ reportData.net_income >= 0 ? 'Income' : 'Loss' }}</span>
+        <span [class.text-green-700]="reportData.net_income >= 0"
+              [class.text-red-700]="reportData.net_income < 0"
+              class="font-mono text-lg">
+          {{ reportData.net_income | number:'1.2-2' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         BALANCE SHEET
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'balance-sheet'">
+      <div class="mb-4">
+        <h3 class="text-lg font-bold text-slate-800">Balance Sheet</h3>
+        <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Assets -->
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">Assets</h4>
+          <table class="w-full text-sm border-collapse">
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngFor="let r of reportData.assets" class="hover:bg-slate-50">
+                <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+                <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bg-blue-50 font-bold border-t border-blue-200">
+                <td class="px-4 py-2.5" colspan="2">Total Assets</td>
+                <td class="px-4 py-2.5 text-right font-mono text-blue-700">{{ reportData.total_assets | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Liabilities + Equity -->
+        <div class="space-y-6">
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">Liabilities</h4>
+            <table class="w-full text-sm border-collapse">
+              <tbody class="divide-y divide-slate-100">
+                <tr *ngFor="let r of reportData.liabilities" class="hover:bg-slate-50">
+                  <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                  <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+                  <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-orange-50 font-bold border-t border-orange-200">
+                  <td class="px-4 py-2.5" colspan="2">Total Liabilities</td>
+                  <td class="px-4 py-2.5 text-right font-mono text-orange-700">{{ reportData.total_liabilities | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">Equity</h4>
+            <table class="w-full text-sm border-collapse">
+              <tbody class="divide-y divide-slate-100">
+                <tr *ngFor="let r of reportData.equity" class="hover:bg-slate-50">
+                  <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                  <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+                  <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
+                </tr>
+                <tr class="hover:bg-slate-50 italic text-slate-500">
+                  <td class="px-4 py-2.5 font-mono w-20"></td>
+                  <td class="px-4 py-2.5">Retained Earnings</td>
+                  <td class="px-4 py-2.5 text-right font-mono w-36">{{ reportData.retained_earnings | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-purple-50 font-bold border-t border-purple-200">
+                  <td class="px-4 py-2.5" colspan="2">Total Equity</td>
+                  <td class="px-4 py-2.5 text-right font-mono text-purple-700">{{ reportData.total_equity | number:'1.2-2' }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="rounded-xl p-4 font-bold text-right bg-slate-50 border border-slate-200">
+            <span class="text-slate-600 mr-4">Total Liabilities &amp; Equity</span>
+            <span class="font-mono text-slate-900">{{ (reportData.total_liabilities + reportData.total_equity) | number:'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         CASH FLOW
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'cash-flow'">
+      <div class="mb-4">
+        <h3 class="text-lg font-bold text-slate-800">Cash Flow Statement</h3>
+        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      </div>
+
+      <ng-container *ngFor="let section of [
+        { key: 'operating', label: 'Operating Activities', total: reportData.total_operating, rows: reportData.operating, color: 'blue' },
+        { key: 'investing', label: 'Investing Activities', total: reportData.total_investing, rows: reportData.investing, color: 'indigo' },
+        { key: 'financing', label: 'Financing Activities', total: reportData.total_financing, rows: reportData.financing, color: 'violet' }
+      ]">
+        <div class="mb-6">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 px-4">{{ section.label }}</h4>
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
+                <th class="px-4 py-2 text-left w-20">Code</th>
+                <th class="px-4 py-2 text-left">Account</th>
+                <th class="px-4 py-2 text-right w-32">Debit</th>
+                <th class="px-4 py-2 text-right w-32">Credit</th>
+                <th class="px-4 py-2 text-right w-32">Net</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr *ngFor="let r of section.rows" class="hover:bg-slate-50">
+                <td class="px-4 py-2.5 font-mono text-slate-500">{{ r.code }}</td>
+                <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
+                <td class="px-4 py-2.5 text-right font-mono">{{ r.debit | number:'1.2-2' }}</td>
+                <td class="px-4 py-2.5 text-right font-mono">{{ r.credit | number:'1.2-2' }}</td>
+                <td class="px-4 py-2.5 text-right font-mono" [class.text-green-700]="r.net > 0" [class.text-red-700]="r.net < 0">{{ r.net | number:'1.2-2' }}</td>
+              </tr>
+              <tr *ngIf="section.rows.length === 0">
+                <td colspan="5" class="px-4 py-3 text-center text-slate-400">No transactions.</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="bg-slate-50 font-bold border-t border-slate-300">
+                <td class="px-4 py-2.5" colspan="4">Net {{ section.label }}</td>
+                <td class="px-4 py-2.5 text-right font-mono" [class.text-green-700]="section.total > 0" [class.text-red-700]="section.total < 0">{{ section.total | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </ng-container>
+
+      <div class="rounded-xl p-4 font-bold text-right text-base"
+           [class.bg-green-50]="reportData.net_cash_flow >= 0"
+           [class.bg-red-50]="reportData.net_cash_flow < 0">
+        <span class="text-slate-600 mr-4">Net Cash Flow</span>
+        <span class="font-mono text-lg"
+              [class.text-green-700]="reportData.net_cash_flow >= 0"
+              [class.text-red-700]="reportData.net_cash_flow < 0">
+          {{ reportData.net_cash_flow | number:'1.2-2' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         GENERAL LEDGER
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'general-ledger'">
+      <div class="mb-4">
+        <h3 class="text-lg font-bold text-slate-800">General Ledger</h3>
+        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      </div>
+
+      <div *ngIf="reportData.accounts.length === 0" class="text-center text-slate-400 py-8">
+        No transactions found for this period.
+      </div>
+
+      <div *ngFor="let acc of reportData.accounts" class="mb-8">
+        <div class="flex items-baseline gap-3 mb-2 px-1">
+          <span class="font-mono font-bold text-slate-700">{{ acc.account_code }}</span>
+          <span class="font-bold text-slate-800">{{ acc.account_name }}</span>
+          <span class="text-xs text-slate-400 capitalize">{{ acc.account_type }}</span>
+        </div>
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
+              <th class="px-4 py-2 text-left w-28">Date</th>
+              <th class="px-4 py-2 text-left w-20">J#</th>
+              <th class="px-4 py-2 text-left">Description</th>
+              <th class="px-4 py-2 text-right w-32">Debit</th>
+              <th class="px-4 py-2 text-right w-32">Credit</th>
+              <th class="px-4 py-2 text-right w-36">Balance</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr *ngFor="let e of acc.entries" class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 text-slate-600">{{ e.date | date:'mediumDate' }}</td>
+              <td class="px-4 py-2.5 font-mono text-slate-500">{{ e.journal_number }}</td>
+              <td class="px-4 py-2.5 text-slate-700">{{ e.description || '—' }}</td>
+              <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ e.debit > 0 ? (e.debit | number:'1.2-2') : '' }}</td>
+              <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ e.credit > 0 ? (e.credit | number:'1.2-2') : '' }}</td>
+              <td class="px-4 py-2.5 text-right font-mono font-bold"
+                  [class.text-slate-800]="e.balance >= 0"
+                  [class.text-red-600]="e.balance < 0">{{ e.balance | number:'1.2-2' }}</td>
+            </tr>
+            <tr *ngIf="acc.entries.length === 0">
+              <td colspan="6" class="px-4 py-3 text-center text-slate-400">No entries.</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="bg-slate-100 font-bold border-t border-slate-300 text-xs uppercase">
+              <td class="px-4 py-2.5" colspan="5">Closing Balance</td>
+              <td class="px-4 py-2.5 text-right font-mono"
+                  [class.text-slate-800]="acc.closing_balance >= 0"
+                  [class.text-red-600]="acc.closing_balance < 0">{{ acc.closing_balance | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         JOURNAL REPORT
+    ══════════════════════════════════ -->
+    <div *ngIf="reportData && activeTab === 'journal-report'">
+      <div class="mb-4 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Journal Report</h3>
+          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+        </div>
+        <span class="text-sm text-slate-500">{{ reportData.total_entries }} entries</span>
+      </div>
+
+      <div *ngIf="reportData.journals.length === 0" class="text-center text-slate-400 py-8">
+        No journals found for this period.
+      </div>
+
+      <div *ngFor="let j of reportData.journals" class="mb-6 border border-slate-200 rounded-lg overflow-hidden">
+        <div class="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-200">
+          <div class="flex items-center gap-4">
+            <span class="font-mono font-bold text-slate-700">J{{ j.journal_number }}</span>
+            <span class="text-slate-600 text-sm">{{ j.date | date:'mediumDate' }}</span>
+            <span class="text-slate-700 text-sm font-medium">{{ j.description || '(no description)' }}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span *ngIf="j.user" class="text-xs text-slate-400">{{ j.user.name }}</span>
+            <span *ngIf="j.status === 'posted'"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">Posted</span>
+            <span *ngIf="j.status === 'draft'"
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">Draft</span>
+          </div>
+        </div>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs uppercase text-slate-500 font-bold bg-white border-b border-slate-100">
+              <th class="px-4 py-2 text-left">Account</th>
+              <th class="px-4 py-2 text-center w-16">Type</th>
+              <th class="px-4 py-2 text-right w-36">Amount</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            <tr *ngFor="let line of j.lines" class="hover:bg-slate-50">
+              <td class="px-4 py-2.5 text-slate-700">
+                <span *ngIf="line.account" class="font-mono text-slate-400 mr-2">{{ line.account.code }}</span>
+                {{ line.account ? line.account.name : '—' }}
+              </td>
+              <td class="px-4 py-2.5 text-center">
+                <span class="font-mono font-bold text-xs px-2 py-0.5 rounded"
+                      [class.bg-blue-100]="line.type === 'DR'"
+                      [class.text-blue-700]="line.type === 'DR'"
+                      [class.bg-orange-100]="line.type === 'CR'"
+                      [class.text-orange-700]="line.type === 'CR'">{{ line.type }}</span>
+              </td>
+              <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ line.amount | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>

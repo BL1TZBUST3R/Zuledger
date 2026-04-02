@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -39,4 +40,12 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::delete('/ledgers/{id}/journals/{journalId}', [App\Http\Controllers\JournalController::class, 'destroy']);
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
     Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);
+
+    // Reports
+    Route::get('/ledgers/{id}/reports/trial-balance', [ReportController::class, 'trialBalance']);
+    Route::get('/ledgers/{id}/reports/profit-and-loss', [ReportController::class, 'profitAndLoss']);
+    Route::get('/ledgers/{id}/reports/balance-sheet', [ReportController::class, 'balanceSheet']);
+    Route::get('/ledgers/{id}/reports/cash-flow', [ReportController::class, 'cashFlow']);
+    Route::get('/ledgers/{id}/reports/general-ledger', [ReportController::class, 'generalLedger']);
+    Route::get('/ledgers/{id}/reports/journal-report', [ReportController::class, 'journalReport']);
 });

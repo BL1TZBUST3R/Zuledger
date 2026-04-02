@@ -41,7 +41,7 @@ export class SidebarComponent implements OnInit {
   checkLedgerContext() {
     const url = this.router.url;
     // Regex to find the ID after 'ledgers/'
-    const match = url.match(/\/(ledger|accounts)\/(\d+)/);
+    const match = url.match(/\/(ledger|accounts)\/(\d+)(?:\/|$)/);
     
     if (match) {
     this.ledgerId = match[2];
