@@ -41,6 +41,10 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
     Route::post('/entries', [App\Http\Controllers\EntryController::class, 'store']);
 
+    // Settings
+    Route::get('/ledgers/{id}/settings', [App\Http\Controllers\SettingsController::class, 'show']);
+    Route::put('/ledgers/{id}/settings', [App\Http\Controllers\SettingsController::class, 'update']);
+
     // Reports
     Route::get('/ledgers/{id}/reports/trial-balance', [ReportController::class, 'trialBalance']);
     Route::get('/ledgers/{id}/reports/profit-and-loss', [ReportController::class, 'profitAndLoss']);

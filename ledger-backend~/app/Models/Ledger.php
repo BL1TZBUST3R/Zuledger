@@ -9,7 +9,12 @@ class Ledger extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'owner_id'];
+    protected $fillable = ['name', 'owner_id', 'fiscal_year_end_month', 'timezone', 'date_format', 'lock_date'];
+
+    protected $casts = [
+        'lock_date' => 'date:Y-m-d',
+        'fiscal_year_end_month' => 'integer',
+    ];
 
     public function owner()
     {

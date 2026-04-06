@@ -41,6 +41,20 @@ class JournalController extends Controller
         return response()->json($journal);
     }
 
+    /**
+     * Check if a given date falls on or before the ledger's lock date.
+     * Returns a JSON error response if locked, null if clear.
+     */
+    private function checkLockDate(Ledger $ledger, string $date)
+    {
+        if ($ledger->lock_date && $date <= $ledger->lock_date->format('Y-m-d')) {
+            return response()->json([
+                'message' => 'This date is on or before the ledger lock date (' . $ledger->lock_date->format('Y-m-d') . '). Changes to locked periods are not allowed.',
+            ], 422);
+        }
+        return null;
+    }
+
     public function store(Request $request, $ledgerId)
     {
         $ledger = Ledger::findOrFail($ledgerId);
@@ -71,6 +85,10 @@ class JournalController extends Controller
                 'total_dr' => round($totalDR, 2),
                 'total_cr' => round($totalCR, 2),
             ], 422);
+        }
+
+        if ($locked = $this->checkLockDate($ledger, $request->date)) {
+            return $locked;
         }
 
         $groupIds = array_column($request->lines, 'group_id');
@@ -134,6 +152,10 @@ class JournalController extends Controller
             return response()->json([
                 'message' => 'Cannot edit a posted journal entry.',
             ], 422);
+        }
+
+        if ($locked = $this->checkLockDate($ledger, $request->date)) {
+            return $locked;
         }
 
         $request->validate([
@@ -228,6 +250,10 @@ class JournalController extends Controller
 
         if ($journal->status === 'posted') {
             return response()->json(['message' => 'Journal is already posted.'], 422);
+        }
+
+        if ($locked = $this->checkLockDate($ledger, $journal->date->format('Y-m-d'))) {
+            return $locked;
         }
 
         $journal->update(['status' => 'posted']);

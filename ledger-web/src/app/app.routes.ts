@@ -6,6 +6,7 @@ import { LoginComponent } from './pages/login/login';
 import { JournalEntryComponent } from './pages/journal-entry/journal-entry'
 import { LedgerComponent } from './pages/ledger/ledger';
 import { ReportsComponent } from './pages/reports/reports';
+import { SettingsComponent } from './pages/settings/settings';
 
 export const routes: Routes = [
     { path: 'login', component: LoginComponent },
@@ -16,4 +17,5 @@ export const routes: Routes = [
     { path: 'ledger/:id/journal', component: JournalEntryComponent },
     { path: 'ledger/:id/reports', component: ReportsComponent },
     { path: 'ledger/:id', component: LedgerComponent },
+    { path: 'ledger/:id/settings', component: SettingsComponent },
 ];
