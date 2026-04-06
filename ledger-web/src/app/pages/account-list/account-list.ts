@@ -83,7 +83,7 @@
     loadLedgerName(id: string) {
       this.ledgerService.getLedger(id).subscribe({
         next: (data: any) => {
-          this.activeLedger.set(data.account?.name || data.name || 'Ledger');
+          this.activeLedger.set(id, data.account?.name || data.name || 'Ledger');
         },
         error: (err: any) => console.error(err)
       });
@@ -141,9 +141,14 @@
       this.showModal = false;
     }
 
-    createAccount() {
+   createAccount() {
       if (!this.newAccount.name || !this.newAccount.code || 
           !this.newAccount.account_type || !this.newAccount.normal_balance || !this.ledgerId) return;
+
+      if (!/^\d{4}$/.test(this.newAccount.code)) {
+        alert('Account code must be exactly 4 digits.');
+        return;
+      }
 
       this.isSaving = true;
 

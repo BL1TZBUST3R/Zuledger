@@ -34,11 +34,10 @@ class LedgerController extends Controller
         'owner_id' => Auth::id(),
     ]);
 
-    // Seed the chart of accounts if a template was chosen
-    if ($request->template) {
-        $seeder = new \Database\Seeders\GroupSeeder();
-        $seeder->run(Auth::user(), $ledger, $request->template);
-    }
+  // Seed the chart of accounts (default to company template)
+    $template = $request->template ?? 'company';
+    $seeder = new \Database\Seeders\GroupSeeder();
+    $seeder->run(Auth::user(), $ledger, $template);
 
     return response()->json($ledger, 201);
 }

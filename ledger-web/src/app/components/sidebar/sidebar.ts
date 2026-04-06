@@ -15,8 +15,12 @@ export class SidebarComponent implements OnInit {
   
   isExpanded = true;
   activeLedger = inject(ActiveLedgerService);
-  isMobile = false;       // 👈 Track mobile state
-  ledgerId: string | null = null; // 👈 Track active Ledger ID
+  isMobile = false;
+  private urlLedgerId: string | null = null;
+
+  get ledgerId(): string | null {
+    return this.urlLedgerId ?? this.activeLedger.ledgerId();
+  }
   
   userName = 'User';
   userEmail = '';
@@ -44,10 +48,9 @@ export class SidebarComponent implements OnInit {
     const match = url.match(/\/(ledger|accounts)\/(\d+)(?:\/|$)/);
     
     if (match) {
-    this.ledgerId = match[2];
+      this.urlLedgerId = match[2];
     } else {
-      // If we are on the Dashboard or Login, clear the ID
-      this.ledgerId = null; 
+      this.urlLedgerId = null;
     }
   }
 

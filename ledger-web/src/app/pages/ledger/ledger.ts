@@ -38,8 +38,8 @@ export class LedgerComponent implements OnInit, OnDestroy {
     this.ledgerService.getLedger(id).subscribe({
       next: (data) => {
         // 👇 FIX: Assign data to 'this.account'
-        this.account = data.account; 
-        this.activeLedger.set(data.account.name);
+        this.account = data.account;
+        this.activeLedger.set(id, data.account.name);
         this.entries = data.entries;
         this.balance = data.current_balance;
 
