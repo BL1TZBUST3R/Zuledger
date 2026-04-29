@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { SettingsService, LedgerSettings } from '../../services/settings.service';
+import { CurrencyService, Currency, REFRESH_OPTIONS, RefreshIntervalMs } from '../../services/currency.service';
 
 @Component({
   selector: 'app-settings',
@@ -23,7 +24,18 @@ export class SettingsComponent implements OnInit {
     timezone: 'UTC',
     date_format: 'DD/MM/YYYY',
     lock_date: null,
+    currency: 'USD',
   };
+
+  // Currency converter widget state
+  currencies: Currency[] = [];
+  converterAmount = 100;
+  converterFrom = 'USD';
+  converterTo = 'EUR';
+  converterResult: number | null = null;
+
+  // Live FX refresh-frequency options (exposed to template)
+  refreshOptions = REFRESH_OPTIONS;
 
   months = [
     { value: 1,  label: 'January' },
@@ -57,21 +69,33 @@ export class SettingsComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private settingsService: SettingsService
-  ) {}
+    private settingsService: SettingsService,
+    public currencyService: CurrencyService
+  ) {
+    // Re-run conversion whenever live rates update (auto-refresh tick or manual refresh).
+    effect(() => {
+      this.currencyService.liveRates();
+      this.runConverter();
+    });
+  }
 
   ngOnInit() {
+    this.currencies = this.currencyService.currencies;
     this.ledgerId = this.route.snapshot.paramMap.get('id');
     if (this.ledgerId) {
       this.loadSettings();
     }
+    this.runConverter();
   }
 
   loadSettings() {
     this.isLoading = true;
     this.settingsService.getSettings(this.ledgerId!).subscribe({
       next: (data) => {
-        this.settings = data;
+        this.settings = { ...data, currency: (data.currency || 'USD').toUpperCase() };
+        this.currencyService.setActive(this.settings.currency);
+        this.converterFrom = this.settings.currency;
+        this.runConverter();
         this.isLoading = false;
       },
       error: () => {
@@ -90,6 +114,7 @@ export class SettingsComponent implements OnInit {
     this.settingsService.saveSettings(this.ledgerId, this.settings).subscribe({
       next: () => {
         this.successMessage = 'Settings saved successfully.';
+        this.currencyService.setActive(this.settings.currency);
         this.isSaving = false;
       },
       error: (err) => {
@@ -101,5 +126,42 @@ export class SettingsComponent implements OnInit {
 
   clearLockDate() {
     this.settings.lock_date = null;
+  }
+
+  runConverter() {
+    const amt = Number(this.converterAmount);
+    if (!amt || isNaN(amt)) {
+      this.converterResult = null;
+      return;
+    }
+    const result = this.currencyService.convert(amt, this.converterFrom, this.converterTo);
+    this.converterResult = isNaN(result) ? null : result;
+  }
+
+  swapConverter() {
+    const tmp = this.converterFrom;
+    this.converterFrom = this.converterTo;
+    this.converterTo = tmp;
+    this.runConverter();
+  }
+
+  formatMoney(amount: number, code: string): string {
+    return this.currencyService.format(amount, code);
+  }
+
+  refreshRates() {
+    this.currencyService.fetchRates(true);
+  }
+
+  onRefreshIntervalChange(value: string | number) {
+    const ms = Number(value) as RefreshIntervalMs;
+    this.currencyService.setRefreshInterval(ms);
+  }
+
+  formatUpdatedAt(iso: string | null): string {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString();
   }
 }

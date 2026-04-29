@@ -130,13 +130,13 @@
                                     </select>
                                 </td>
                                 <td class="px-3 py-2">
-                                    <select [(ngModel)]="line.type" class="w-full border-slate-300 rounded p-1.5 border text-sm bg-white">
+                                    <select [(ngModel)]="line.type" (ngModelChange)="recomputeTotals()" class="w-full border-slate-300 rounded p-1.5 border text-sm bg-white">
                                         <option value="DR">DR</option>
                                         <option value="CR">CR</option>
                                     </select>
                                 </td>
                                 <td class="px-3 py-2">
-                                    <input [(ngModel)]="line.amount" type="number" step="0.01" min="0.01" placeholder="0.00"
+                                    <input [(ngModel)]="line.amount" (ngModelChange)="recomputeTotals()" type="number" step="0.01" min="0.01" placeholder="0.00"
                                            class="w-full border-slate-300 rounded p-1.5 border text-sm text-right font-mono">
                                 </td>
                                 <td class="px-3 py-2 text-center">

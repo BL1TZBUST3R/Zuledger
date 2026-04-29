@@ -1,43 +1,40 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from './api.config';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class LedgerService {
-  // Update this to your Render URL for production
-  private apiUrl = 'https://zuledger.onrender.com/api/ledgers'; 
 
-  constructor(private http: HttpClient) { }
+  private apiUrl = `${API_BASE_URL}/ledgers`;
 
-  // 1. Get List of Ledgers (Owned + Shared)
+  constructor(private http: HttpClient) {}
+
   getLedgers(): Observable<any> {
     return this.http.get<any>(this.apiUrl);
   }
 
-  // 2. Get Single Ledger Details
   getLedger(id: string): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  // 3. Create a New Ledger
   createLedger(name: string, template: string = ''): Observable<any> {
-  return this.http.post<any>(this.apiUrl, { name, template });
-}
-  // 4. Authorize / Invite User
+    return this.http.post<any>(this.apiUrl, { name, template });
+  }
+
   authorizeUser(ledgerId: string, email: string, role: string): Observable<any> {
     return this.http.post<any>(`${this.apiUrl}/${ledgerId}/authorize`, { email, role });
   }
-  
-  renameLedger(id: string, name: string): Observable<any> {
-  return this.http.put<any>(`${this.apiUrl}/${id}`, { name });
-}
 
-deleteLedger(id: string): Observable<any> {
-  return this.http.delete<any>(`${this.apiUrl}/${id}`);
-}
-removeUser(ledgerId: string, userId: number): Observable<any> {
-  return this.http.delete<any>(`${this.apiUrl}/${ledgerId}/users`, { body: { user_id: userId } });
-}
+  renameLedger(id: string, name: string): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}`, { name });
+  }
+
+  deleteLedger(id: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
+  }
+
+  removeUser(ledgerId: string, userId: number): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/${ledgerId}/users`, { body: { user_id: userId } });
+  }
 }

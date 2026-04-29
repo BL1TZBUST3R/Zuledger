@@ -41,15 +41,11 @@ class LedgerController extends Controller
 
     return response()->json($ledger, 201);
 }
-    public function show($id)
+    public function show($id, Request $request)
 {
-    // 1. Get the Ledger directly
     $ledger = Ledger::findOrFail($id);
-
-    // 2. Check Permissions
     $this->authorize('view', $ledger);
 
-    // 3. Permission Metadata
     $user = Auth::user();
     $isOwner = $ledger->owner_id === $user->id;
     $permissionLevel = 'viewer';
@@ -65,28 +61,50 @@ class LedgerController extends Controller
         }
     }
 
-    // 4. Fetch Transactions
+    $limit = min((int) $request->query('limit', 500), 2000);
+    if ($limit < 1) $limit = 500;
+
+    // Total entry count — used to decide whether the running balance needs seeding.
+    $totalCount = EntryItem::where('entry_items.ledger_id', $id)->count();
+
+    // Most recent entries, capped, then re-ordered chronologically for display.
     $items = EntryItem::where('entry_items.ledger_id', $id)
         ->join('entries', 'entry_items.entry_id', '=', 'entries.id')
         ->select('entry_items.*', 'entries.date', 'entries.number', 'entries.narration')
-        ->orderBy('entries.date', 'asc')
-        ->get();
+        ->orderBy('entries.date', 'desc')
+        ->orderBy('entry_items.id', 'desc')
+        ->limit($limit)
+        ->get()
+        ->reverse()
+        ->values();
 
-    // 5. Running Balance
-    $balance = 0;
+    // If we truncated, seed the running balance with the cumulative total of the
+    // older (non-returned) entries so the visible row balances reconcile to total.
+    $startingBalance = 0.0;
+    if ($totalCount > $items->count() && $items->isNotEmpty()) {
+        $oldestReturnedId = $items->first()->id;
+        $row = EntryItem::where('entry_items.ledger_id', $id)
+            ->where('entry_items.id', '<', $oldestReturnedId)
+            ->selectRaw("COALESCE(SUM(CASE WHEN dc = 'D' THEN amount ELSE -amount END), 0) as bal")
+            ->first();
+        $startingBalance = (float) ($row->bal ?? 0);
+    }
+
+    $balance = $startingBalance;
     $formattedItems = $items->map(function ($item) use (&$balance) {
-        $balance += ($item->dc === 'D' ? $item->amount : -$item->amount);
+        $balance += ($item->dc === 'D' ? (float) $item->amount : -(float) $item->amount);
         $item->running_balance = $balance;
         return $item;
     });
 
-    // 6. Return
     return response()->json([
         'account' => $ledger,
         'entries' => $formattedItems,
         'current_balance' => $balance,
         'is_owner' => $isOwner,
-        'permission_level' => $permissionLevel
+        'permission_level' => $permissionLevel,
+        'truncated' => $totalCount > $items->count(),
+        'total_entries' => $totalCount,
     ]);
 }
 

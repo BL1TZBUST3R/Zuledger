@@ -25,6 +25,7 @@ class SettingsController extends Controller
             'timezone'              => $ledger->timezone ?? 'UTC',
             'date_format'           => $ledger->date_format ?? 'DD/MM/YYYY',
             'lock_date'             => $ledger->lock_date ? $ledger->lock_date->format('Y-m-d') : null,
+            'currency'              => $ledger->currency ?? 'USD',
         ]);
     }
 
@@ -42,6 +43,7 @@ class SettingsController extends Controller
             'timezone'              => 'required|string|timezone',
             'date_format'           => 'required|in:DD/MM/YYYY,MM/DD/YYYY',
             'lock_date'             => 'nullable|date',
+            'currency'              => 'required|string|size:3',
         ]);
 
         $ledger->update([
@@ -49,6 +51,7 @@ class SettingsController extends Controller
             'timezone'              => $request->timezone,
             'date_format'           => $request->date_format,
             'lock_date'             => $request->lock_date,
+            'currency'              => strtoupper($request->currency),
         ]);
 
         return response()->json(['message' => 'Settings saved successfully.']);

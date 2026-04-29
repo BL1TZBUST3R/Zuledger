@@ -2,13 +2,12 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
 import { AuthService } from '../../services/auth';
 
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, HttpClientModule],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './register.html',
   styleUrl: './register.css'
 })
@@ -45,13 +44,11 @@ constructor(private authService: AuthService, private router: Router) {}
 
   onRegister() {
     this.authService.register(this.user).subscribe({
-      next: (response: any) => {
-        console.log('Success:', response);
+      next: () => {
         alert('Account Created! Redirecting to login...');
         this.router.navigate(['/login']);
       },
       error: (error: any) => {
-        console.error('Error:', error);
         alert('Registration Failed: ' + (error.error?.message || 'Server Error'));
       }
     });

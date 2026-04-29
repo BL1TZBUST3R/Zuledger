@@ -1,4 +1,4 @@
-  import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+  import { Component, OnInit } from '@angular/core';
   import { CommonModule } from '@angular/common';
   import { RouterModule, ActivatedRoute } from '@angular/router';
   import { FormsModule } from '@angular/forms';
@@ -63,7 +63,6 @@
 
     constructor(
       private accountService: AccountService,
-      private cdr: ChangeDetectorRef,
       private route: ActivatedRoute,
       private activeLedger: ActiveLedgerService,
       private ledgerService: LedgerService
@@ -94,7 +93,6 @@
         next: (data: any) => {
           this.groups = data;
           this.isLoading = false;
-          this.cdr.detectChanges();
         },
         error: (err: any) => {
           console.error(err);

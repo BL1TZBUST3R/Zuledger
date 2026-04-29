@@ -1,9 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // 👈 Needed for inputs
-import { RouterModule } from '@angular/router'; // 👈 Needed for links to ledgers
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
-import { LedgerService } from '../../services/ledger.service'; // 👈 New Service
+import { LedgerService } from '../../services/ledger.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,8 +32,7 @@ export class DashboardComponent implements OnInit {
 
  constructor(
   private dashboardService: DashboardService,
-  private ledgerService: LedgerService,
-  private cdr: ChangeDetectorRef
+  private ledgerService: LedgerService
 ) {}
 
  ngOnInit() {
@@ -50,7 +49,6 @@ loadData() {
   const checkDone = () => {
     if (statsLoaded && ledgersLoaded) {
       this.isLoading = false;
-      this.cdr.detectChanges();
     }
   };
 

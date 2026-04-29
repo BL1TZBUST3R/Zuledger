@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../services/report.service';
+import { SettingsService } from '../../services/settings.service';
+import { CurrencyService } from '../../services/currency.service';
 
 type ReportTab = 'trial-balance' | 'profit-loss' | 'balance-sheet' | 'cash-flow' | 'general-ledger' | 'journal-report';
 
@@ -38,10 +40,31 @@ export class ReportsComponent implements OnInit {
     { id: 'journal-report',  label: 'Journal Report' },
   ];
 
-  constructor(private route: ActivatedRoute, private reportService: ReportService) {}
+  currencyCode = 'USD';
+
+  constructor(
+    private route: ActivatedRoute,
+    private reportService: ReportService,
+    private settingsService: SettingsService,
+    private currencyService: CurrencyService
+  ) {}
 
   ngOnInit() {
     this.ledgerId = this.route.snapshot.paramMap.get('id');
+    this.currencyCode = this.currencyService.activeCurrency();
+    if (this.ledgerId) {
+      this.settingsService.getSettings(this.ledgerId).subscribe({
+        next: (s) => {
+          this.currencyCode = (s.currency || 'USD').toUpperCase();
+          this.currencyService.setActive(this.currencyCode);
+        },
+        error: () => { /* fall back to cached active currency */ }
+      });
+    }
+  }
+
+  money(amount: number | null | undefined): string {
+    return this.currencyService.format(amount ?? 0, this.currencyCode);
   }
 
   setTab(tab: ReportTab) {

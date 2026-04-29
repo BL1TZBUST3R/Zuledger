@@ -1,17 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from './api.config';
 
-@Injectable({
-  providedIn: 'root'
-})
-// 🚨 Ensure 'export' is here!
+@Injectable({ providedIn: 'root' })
 export class DashboardService {
-  private apiUrl = 'https://zuledger.onrender.com/api/dashboard';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   getStats(): Observable<any> {
-    return this.http.get<any>(this.apiUrl);
+    return this.http.get<any>(`${API_BASE_URL}/dashboard`);
   }
 }

@@ -9,10 +9,39 @@ use App\Models\Ledger;
 use App\Models\Group;
 use App\Models\Journal;
 use App\Models\JournalLine;
+use Carbon\Carbon;
 
 class ReportController extends Controller
 {
     use AuthorizesRequests;
+
+    /**
+     * Aggregate posted DR/CR totals per group_id for a ledger and date window
+     * in a SINGLE query. Returns array keyed by group_id with ['dr' => ..., 'cr' => ...].
+     */
+    private function postedTotalsByGroup($ledgerId, $from = null, $to = null): array
+    {
+        $rows = JournalLine::query()
+            ->join('journals', 'journal_lines.journal_id', '=', 'journals.id')
+            ->where('journals.ledger_id', $ledgerId)
+            ->where('journals.status', 'posted')
+            ->when($from, fn($q) => $q->where('journals.date', '>=', $from))
+            ->when($to,   fn($q) => $q->where('journals.date', '<=', $to))
+            ->groupBy('journal_lines.group_id')
+            ->selectRaw('journal_lines.group_id as group_id')
+            ->selectRaw("SUM(CASE WHEN journal_lines.type = 'DR' THEN journal_lines.amount ELSE 0 END) as dr_total")
+            ->selectRaw("SUM(CASE WHEN journal_lines.type = 'CR' THEN journal_lines.amount ELSE 0 END) as cr_total")
+            ->get();
+
+        $totals = [];
+        foreach ($rows as $r) {
+            $totals[$r->group_id] = [
+                'dr' => (float) $r->dr_total,
+                'cr' => (float) $r->cr_total,
+            ];
+        }
+        return $totals;
+    }
 
     // Trial Balance
     public function trialBalance($ledgerId, Request $request)
@@ -27,28 +56,15 @@ class ReportController extends Controller
             ->orderBy('code')
             ->get();
 
+        $totals = $this->postedTotalsByGroup($ledgerId, null, $asAt);
+
         $rows = [];
         $totalDR = 0;
         $totalCR = 0;
 
         foreach ($accounts as $account) {
-            $debits = JournalLine::where('group_id', $account->id)
-                ->where('type', 'DR')
-                ->whereHas('journal', function ($q) use ($ledgerId, $asAt) {
-                    $q->where('ledger_id', $ledgerId)
-                      ->where('status', 'posted')
-                      ->where('date', '<=', $asAt);
-                })->sum('amount');
-
-            $credits = JournalLine::where('group_id', $account->id)
-                ->where('type', 'CR')
-                ->whereHas('journal', function ($q) use ($ledgerId, $asAt) {
-                    $q->where('ledger_id', $ledgerId)
-                      ->where('status', 'posted')
-                      ->where('date', '<=', $asAt);
-                })->sum('amount');
-
-            $balance = $debits - $credits;
+            $t = $totals[$account->id] ?? ['dr' => 0, 'cr' => 0];
+            $balance = $t['dr'] - $t['cr'];
             if (abs($balance) < 0.01) continue;
 
             $row = [
@@ -82,8 +98,13 @@ class ReportController extends Controller
         $from = $request->query('from', now()->startOfYear()->toDateString());
         $to = $request->query('to', now()->toDateString());
 
-        $revenue = $this->sumByType($ledgerId, 'revenue', $from, $to);
-        $expenses = $this->sumByType($ledgerId, 'expense', $from, $to);
+        $totals = $this->postedTotalsByGroup($ledgerId, $from, $to);
+
+        $revenue = $this->buildTypeRows($ledgerId, 'revenue', $totals);
+        $expenses = $this->buildTypeRows($ledgerId, 'expense', $totals);
+
+        $totalRevenue = array_sum(array_column($revenue, 'balance'));
+        $totalExpenses = array_sum(array_column($expenses, 'balance'));
 
         return response()->json([
             'report' => 'Profit & Loss',
@@ -91,9 +112,9 @@ class ReportController extends Controller
             'to' => $to,
             'revenue' => $revenue,
             'expenses' => $expenses,
-            'total_revenue' => collect($revenue)->sum('balance'),
-            'total_expenses' => collect($expenses)->sum('balance'),
-            'net_income' => collect($revenue)->sum('balance') - collect($expenses)->sum('balance'),
+            'total_revenue' => round($totalRevenue, 2),
+            'total_expenses' => round($totalExpenses, 2),
+            'net_income' => round($totalRevenue - $totalExpenses, 2),
         ]);
     }
 
@@ -105,17 +126,22 @@ class ReportController extends Controller
 
         $asAt = $request->query('as_at', now()->toDateString());
 
-        $assets = $this->sumByType($ledgerId, 'asset', null, $asAt);
-        $liabilities = $this->sumByType($ledgerId, 'liability', null, $asAt);
-        $equity = $this->sumByType($ledgerId, 'equity', null, $asAt);
+        // One aggregate query covers every account type below.
+        $totals = $this->postedTotalsByGroup($ledgerId, null, $asAt);
 
-        $revenueTotal = collect($this->sumByType($ledgerId, 'revenue', null, $asAt))->sum('balance');
-        $expenseTotal = collect($this->sumByType($ledgerId, 'expense', null, $asAt))->sum('balance');
+        $assets      = $this->buildTypeRows($ledgerId, 'asset',     $totals);
+        $liabilities = $this->buildTypeRows($ledgerId, 'liability', $totals);
+        $equity      = $this->buildTypeRows($ledgerId, 'equity',    $totals);
+        $revenue     = $this->buildTypeRows($ledgerId, 'revenue',   $totals);
+        $expenses    = $this->buildTypeRows($ledgerId, 'expense',   $totals);
+
+        $revenueTotal     = array_sum(array_column($revenue, 'balance'));
+        $expenseTotal     = array_sum(array_column($expenses, 'balance'));
         $retainedEarnings = $revenueTotal - $expenseTotal;
 
-        $totalAssets = collect($assets)->sum('balance');
-        $totalLiabilities = collect($liabilities)->sum('balance');
-        $totalEquity = collect($equity)->sum('balance') + $retainedEarnings;
+        $totalAssets      = array_sum(array_column($assets, 'balance'));
+        $totalLiabilities = array_sum(array_column($liabilities, 'balance'));
+        $totalEquity      = array_sum(array_column($equity, 'balance')) + $retainedEarnings;
 
         return response()->json([
             'report' => 'Balance Sheet',
@@ -139,9 +165,15 @@ class ReportController extends Controller
         $from = $request->query('from', now()->startOfYear()->toDateString());
         $to = $request->query('to', now()->toDateString());
 
-        $operating = $this->sumByCashflow($ledgerId, 'operating', $from, $to);
-        $investing = $this->sumByCashflow($ledgerId, 'investing', $from, $to);
-        $financing = $this->sumByCashflow($ledgerId, 'financing', $from, $to);
+        $totals = $this->postedTotalsByGroup($ledgerId, $from, $to);
+
+        $operating = $this->buildCashflowRows($ledgerId, 'operating', $totals);
+        $investing = $this->buildCashflowRows($ledgerId, 'investing', $totals);
+        $financing = $this->buildCashflowRows($ledgerId, 'financing', $totals);
+
+        $totalOperating = array_sum(array_column($operating, 'net'));
+        $totalInvesting = array_sum(array_column($investing, 'net'));
+        $totalFinancing = array_sum(array_column($financing, 'net'));
 
         return response()->json([
             'report' => 'Cash Flow Statement',
@@ -150,10 +182,10 @@ class ReportController extends Controller
             'operating' => $operating,
             'investing' => $investing,
             'financing' => $financing,
-            'total_operating' => collect($operating)->sum('net'),
-            'total_investing' => collect($investing)->sum('net'),
-            'total_financing' => collect($financing)->sum('net'),
-            'net_cash_flow' => collect($operating)->sum('net') + collect($investing)->sum('net') + collect($financing)->sum('net'),
+            'total_operating' => round($totalOperating, 2),
+            'total_investing' => round($totalInvesting, 2),
+            'total_financing' => round($totalFinancing, 2),
+            'net_cash_flow' => round($totalOperating + $totalInvesting + $totalFinancing, 2),
         ]);
     }
 
@@ -167,43 +199,56 @@ class ReportController extends Controller
         $to = $request->query('to', now()->toDateString());
         $accountId = $request->query('account_id');
 
-        $query = Group::where('ledger_id', $ledgerId)
+        $accountQuery = Group::where('ledger_id', $ledgerId)
             ->whereNotNull('parent_id')
             ->orderBy('code');
-
         if ($accountId) {
-            $query->where('id', $accountId);
+            $accountQuery->where('id', $accountId);
+        }
+        $accounts = $accountQuery->get();
+        $accountById = $accounts->keyBy('id');
+
+        // Single query — pull all relevant lines + journal info up front.
+        $lines = JournalLine::query()
+            ->join('journals', 'journal_lines.journal_id', '=', 'journals.id')
+            ->where('journals.ledger_id', $ledgerId)
+            ->where('journals.status', 'posted')
+            ->whereBetween('journals.date', [$from, $to])
+            ->whereIn('journal_lines.group_id', $accounts->pluck('id'))
+            ->orderBy('journals.date')
+            ->orderBy('journals.journal_number')
+            ->select(
+                'journal_lines.group_id',
+                'journal_lines.amount',
+                'journal_lines.type',
+                'journals.journal_number',
+                'journals.date',
+                'journals.description'
+            )
+            ->get();
+
+        // Bucket lines by account.
+        $byAccount = [];
+        foreach ($lines as $l) {
+            $byAccount[$l->group_id][] = $l;
         }
 
-        $accounts = $query->get();
         $result = [];
-
         foreach ($accounts as $account) {
-            $lines = JournalLine::where('group_id', $account->id)
-                ->whereHas('journal', function ($q) use ($ledgerId, $from, $to) {
-                    $q->where('ledger_id', $ledgerId)
-                      ->where('status', 'posted')
-                      ->whereBetween('date', [$from, $to]);
-                })
-                ->with(['journal' => function ($q) {
-                    $q->select('id', 'journal_number', 'date', 'description');
-                }])
-                ->get();
-
-            if ($lines->isEmpty() && !$accountId) continue;
+            $accountLines = $byAccount[$account->id] ?? [];
+            if (empty($accountLines) && !$accountId) continue;
 
             $balance = 0;
             $entries = [];
-            foreach ($lines as $line) {
-                $amount = $line->type === 'DR' ? $line->amount : -$line->amount;
-                $balance += $amount;
+            foreach ($accountLines as $line) {
+                $balance += $line->type === 'DR' ? $line->amount : -$line->amount;
                 $entries[] = [
-                    'date' => $line->journal->date->toDateString(),
-                    'journal_number' => $line->journal->journal_number,
-                    'description' => $line->journal->description,
-                    'debit' => $line->type === 'DR' ? round($line->amount, 2) : 0,
-                    'credit' => $line->type === 'CR' ? round($line->amount, 2) : 0,
-                    'balance' => round($balance, 2),
+                    'date'           => Carbon::parse($line->date)->toDateString(),
+                    'journal_number' => $line->journal_number,
+                    'description'    => $line->description,
+                    'debit'          => $line->type === 'DR' ? round($line->amount, 2) : 0,
+                    'credit'         => $line->type === 'CR' ? round($line->amount, 2) : 0,
+                    'balance'        => round($balance, 2),
                 ];
             }
 
@@ -211,7 +256,7 @@ class ReportController extends Controller
                 'account_code' => $account->code,
                 'account_name' => $account->name,
                 'account_type' => $account->account_type,
-                'entries' => $entries,
+                'entries'      => $entries,
                 'closing_balance' => round($balance, 2),
             ];
         }
@@ -254,8 +299,11 @@ class ReportController extends Controller
         ]);
     }
 
-    // Helper: Sum account balances by account type
-    private function sumByType($ledgerId, $type, $from = null, $to = null)
+    /**
+     * Build P&L / Balance Sheet rows for a given account type using
+     * pre-aggregated totals (one query) instead of per-account queries.
+     */
+    private function buildTypeRows($ledgerId, $type, array $totals): array
     {
         $accounts = Group::where('ledger_id', $ledgerId)
             ->where('account_type', $type)
@@ -263,24 +311,12 @@ class ReportController extends Controller
             ->orderBy('code')
             ->get();
 
+        $isCreditNormal = in_array($type, ['liability', 'equity', 'revenue'], true);
+
         $result = [];
         foreach ($accounts as $account) {
-            $query = JournalLine::where('group_id', $account->id)
-                ->whereHas('journal', function ($q) use ($ledgerId, $from, $to) {
-                    $q->where('ledger_id', $ledgerId)
-                      ->where('status', 'posted');
-                    if ($from) $q->where('date', '>=', $from);
-                    if ($to) $q->where('date', '<=', $to);
-                });
-
-            $debits = (clone $query)->where('type', 'DR')->sum('amount');
-            $credits = (clone $query)->where('type', 'CR')->sum('amount');
-
-            $balance = $debits - $credits;
-            if ($type === 'liability' || $type === 'equity' || $type === 'revenue') {
-                $balance = $credits - $debits;
-            }
-
+            $t = $totals[$account->id] ?? ['dr' => 0, 'cr' => 0];
+            $balance = $isCreditNormal ? ($t['cr'] - $t['dr']) : ($t['dr'] - $t['cr']);
             if (abs($balance) < 0.01) continue;
 
             $result[] = [
@@ -293,8 +329,7 @@ class ReportController extends Controller
         return $result;
     }
 
-    // Helper: Sum by cash flow type
-    private function sumByCashflow($ledgerId, $cashflowType, $from, $to)
+    private function buildCashflowRows($ledgerId, $cashflowType, array $totals): array
     {
         $accounts = Group::where('ledger_id', $ledgerId)
             ->where('cashflow_type', $cashflowType)
@@ -304,25 +339,16 @@ class ReportController extends Controller
 
         $result = [];
         foreach ($accounts as $account) {
-            $query = JournalLine::where('group_id', $account->id)
-                ->whereHas('journal', function ($q) use ($ledgerId, $from, $to) {
-                    $q->where('ledger_id', $ledgerId)
-                      ->where('status', 'posted')
-                      ->whereBetween('date', [$from, $to]);
-                });
-
-            $debits = (clone $query)->where('type', 'DR')->sum('amount');
-            $credits = (clone $query)->where('type', 'CR')->sum('amount');
-
-            $net = $debits - $credits;
+            $t = $totals[$account->id] ?? ['dr' => 0, 'cr' => 0];
+            $net = $t['dr'] - $t['cr'];
             if (abs($net) < 0.01) continue;
 
             $result[] = [
-                'code' => $account->code,
-                'name' => $account->name,
-                'debit' => round($debits, 2),
-                'credit' => round($credits, 2),
-                'net' => round($net, 2),
+                'code'   => $account->code,
+                'name'   => $account->name,
+                'debit'  => round($t['dr'], 2),
+                'credit' => round($t['cr'], 2),
+                'net'    => round($net, 2),
             ];
         }
 

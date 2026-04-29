@@ -1,40 +1,26 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from './api.config';
 
 export interface LedgerSettings {
   fiscal_year_end_month: number;  // 1–12
   timezone: string;               // IANA timezone e.g. 'Australia/Sydney'
   date_format: 'DD/MM/YYYY' | 'MM/DD/YYYY';
   lock_date: string | null;       // ISO date string e.g. '2025-12-31' or null
+  currency: string;               // ISO 4217 code e.g. 'USD', 'AUD', 'EUR'
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class SettingsService {
-
-  private apiUrl = 'https://zuledger.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
-  private getHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return new HttpHeaders({ 'Authorization': `Bearer ${token}` });
-  }
-
   getSettings(ledgerId: string): Observable<LedgerSettings> {
-    return this.http.get<LedgerSettings>(
-      `${this.apiUrl}/ledgers/${ledgerId}/settings`,
-      { headers: this.getHeaders() }
-    );
+    return this.http.get<LedgerSettings>(`${API_BASE_URL}/ledgers/${ledgerId}/settings`);
   }
 
   saveSettings(ledgerId: string, settings: LedgerSettings): Observable<any> {
-    return this.http.put(
-      `${this.apiUrl}/ledgers/${ledgerId}/settings`,
-      settings,
-      { headers: this.getHeaders() }
-    );
+    return this.http.put(`${API_BASE_URL}/ledgers/${ledgerId}/settings`, settings);
   }
 }

@@ -40,6 +40,11 @@ export class JournalEntryComponent implements OnInit {
   journals: Journal[] = [];
   accounts: Account[] = [];
   flatAccounts: Account[] = [];
+  // O(1) lookup for getAccountName(); rebuilt only when accounts change.
+  private accountById = new Map<number, Account>();
+  // Per-journal precomputed DR total; rebuilt only when journals change.
+  private journalDrTotals = new Map<number, string>();
+
   isLoading: boolean = true;
   ledgerId: string | null = null;
 
@@ -57,24 +62,24 @@ export class JournalEntryComponent implements OnInit {
     ] as any[]
   };
 
-  get totalDR(): number {
-    return this.newJournal.lines
-      .filter((l: any) => l.type === 'DR')
-      .reduce((sum: number, l: any) => sum + (parseFloat(l.amount) || 0), 0);
-  }
+  // Cached modal totals; refreshed on any line change via recomputeTotals().
+  totalDR = 0;
+  totalCR = 0;
+  isBalanced = false;
+  difference = 0;
 
-  get totalCR(): number {
-    return this.newJournal.lines
-      .filter((l: any) => l.type === 'CR')
-      .reduce((sum: number, l: any) => sum + (parseFloat(l.amount) || 0), 0);
-  }
-
-  get isBalanced(): boolean {
-    return Math.abs(this.totalDR - this.totalCR) < 0.01 && this.totalDR > 0;
-  }
-
-  get difference(): number {
-    return Math.abs(this.totalDR - this.totalCR);
+  recomputeTotals() {
+    let dr = 0;
+    let cr = 0;
+    for (const l of this.newJournal.lines) {
+      const amt = parseFloat(l.amount) || 0;
+      if (l.type === 'DR') dr += amt;
+      else if (l.type === 'CR') cr += amt;
+    }
+    this.totalDR = dr;
+    this.totalCR = cr;
+    this.difference = Math.abs(dr - cr);
+    this.isBalanced = this.difference < 0.01 && dr > 0;
   }
 
   constructor(
@@ -96,6 +101,7 @@ export class JournalEntryComponent implements OnInit {
     this.journalService.getJournals(this.ledgerId).subscribe({
       next: (data: any) => {
         this.journals = data;
+        this.rebuildJournalTotals();
         this.isLoading = false;
       },
       error: (err: any) => {
@@ -110,19 +116,33 @@ export class JournalEntryComponent implements OnInit {
     this.accountService.getGroups(this.ledgerId).subscribe({
       next: (data: any) => {
         this.accounts = data;
-        this.flatAccounts = [];
-        data.forEach((group: any) => {
+        const flat: Account[] = [];
+        for (const group of data) {
           if (group.children && group.children.length > 0) {
-            group.children.forEach((child: any) => {
-              this.flatAccounts.push(child);
-            });
+            for (const child of group.children) flat.push(child);
           } else {
-            this.flatAccounts.push(group);
+            flat.push(group);
           }
-        });
+        }
+        this.flatAccounts = flat;
+        const map = new Map<number, Account>();
+        for (const a of flat) map.set(a.id, a);
+        this.accountById = map;
       },
       error: (err: any) => console.error(err)
     });
+  }
+
+  private rebuildJournalTotals() {
+    const totals = new Map<number, string>();
+    for (const j of this.journals) {
+      let dr = 0;
+      for (const l of j.lines) {
+        if (l.type === 'DR') dr += parseFloat(l.amount as any) || 0;
+      }
+      totals.set(j.id, dr.toFixed(2));
+    }
+    this.journalDrTotals = totals;
   }
 
   openCreateModal() {
@@ -137,6 +157,7 @@ export class JournalEntryComponent implements OnInit {
         { group_id: '', amount: '', type: 'CR' },
       ]
     };
+    this.recomputeTotals();
   }
 
   openEditModal(journal: Journal) {
@@ -154,6 +175,7 @@ export class JournalEntryComponent implements OnInit {
         type: l.type
       }))
     };
+    this.recomputeTotals();
   }
 
   closeModal() {
@@ -162,11 +184,13 @@ export class JournalEntryComponent implements OnInit {
 
   addLine() {
     this.newJournal.lines.push({ group_id: '', amount: '', type: 'DR' });
+    this.recomputeTotals();
   }
 
   removeLine(index: number) {
     if (this.newJournal.lines.length > 2) {
       this.newJournal.lines.splice(index, 1);
+      this.recomputeTotals();
     }
   }
 
@@ -232,15 +256,12 @@ export class JournalEntryComponent implements OnInit {
   }
 
   getLineSummary(journal: Journal): string {
-    const totalDR = journal.lines
-      .filter((l: any) => l.type === 'DR')
-      .reduce((sum: number, l: any) => sum + parseFloat(l.amount), 0);
-    return totalDR.toFixed(2);
+    return this.journalDrTotals.get(journal.id) ?? '0.00';
   }
 
   getAccountName(line: JournalLine): string {
     if (line.account) return `${line.account.code} - ${line.account.name}`;
-    const found = this.flatAccounts.find((a: any) => a.id === line.group_id);
+    const found = this.accountById.get(line.group_id);
     return found ? `${found.code} - ${found.name}` : 'Unknown';
   }
 }

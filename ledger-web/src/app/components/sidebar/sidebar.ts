@@ -99,6 +99,7 @@ export class SidebarComponent implements OnInit {
   }
 
   logout() {
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     this.router.navigate(['/login']);

@@ -1,50 +1,38 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { API_BASE_URL } from './api.config';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class JournalService {
-
-  private apiUrl = 'https://zuledger.onrender.com/api';
 
   constructor(private http: HttpClient) {}
 
-  private getHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return {
-      headers: new HttpHeaders({
-        'Authorization': `Bearer ${token}`
-      })
-    };
-  }
-
   getJournals(ledgerId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/ledgers/${ledgerId}/journals`, this.getHeaders());
+    return this.http.get(`${API_BASE_URL}/ledgers/${ledgerId}/journals`);
   }
 
   getJournal(ledgerId: string, journalId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}`, this.getHeaders());
+    return this.http.get(`${API_BASE_URL}/ledgers/${ledgerId}/journals/${journalId}`);
   }
 
   createJournal(ledgerId: string, data: any): Observable<any> {
-    return this.http.post(`${this.apiUrl}/ledgers/${ledgerId}/journals`, data, this.getHeaders());
+    return this.http.post(`${API_BASE_URL}/ledgers/${ledgerId}/journals`, data);
   }
 
   updateJournal(ledgerId: string, journalId: string, data: any): Observable<any> {
-    return this.http.put(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}`, data, this.getHeaders());
+    return this.http.put(`${API_BASE_URL}/ledgers/${ledgerId}/journals/${journalId}`, data);
   }
 
   postJournal(ledgerId: string, journalId: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}/post`, {}, this.getHeaders());
+    return this.http.patch(`${API_BASE_URL}/ledgers/${ledgerId}/journals/${journalId}/post`, {});
   }
 
- reverseJournal(ledgerId: string, journalId: string): Observable<any> {
-    return this.http.patch(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}/reverse`, {}, this.getHeaders());
+  reverseJournal(ledgerId: string, journalId: string): Observable<any> {
+    return this.http.patch(`${API_BASE_URL}/ledgers/${ledgerId}/journals/${journalId}/reverse`, {});
   }
 
   deleteJournal(ledgerId: string, journalId: string): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/ledgers/${ledgerId}/journals/${journalId}`, this.getHeaders());
+    return this.http.delete(`${API_BASE_URL}/ledgers/${ledgerId}/journals/${journalId}`);
   }
 }

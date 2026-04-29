@@ -9,7 +9,7 @@ class Ledger extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'owner_id', 'fiscal_year_end_month', 'timezone', 'date_format', 'lock_date'];
+    protected $fillable = ['name', 'owner_id', 'fiscal_year_end_month', 'timezone', 'date_format', 'lock_date', 'currency'];
 
     protected $casts = [
         'lock_date' => 'date:Y-m-d',
@@ -35,9 +35,11 @@ class Ledger extends Model
 
     public function scopeForUser($query, $user)
     {
-        return $query->where('owner_id', $user->id)
-                     ->orWhereHas('authorizedUsers', function ($q) use ($user) {
-                         $q->where('user_id', $user->id);
-                     });
+        return $query->where(function ($q) use ($user) {
+            $q->where('owner_id', $user->id)
+              ->orWhereHas('authorizedUsers', function ($q2) use ($user) {
+                  $q2->where('user_id', $user->id);
+              });
+        });
     }
 }

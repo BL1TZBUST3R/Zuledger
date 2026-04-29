@@ -109,9 +109,12 @@
          TRIAL BALANCE
     ══════════════════════════════════ -->
     <div *ngIf="reportData && activeTab === 'trial-balance'">
-      <div class="mb-4 print:mb-2">
-        <h3 class="text-lg font-bold text-slate-800">Trial Balance</h3>
-        <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+      <div class="mb-4 print:mb-2 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Trial Balance</h3>
+          <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
       <table class="w-full text-sm border-collapse">
         <thead>
@@ -154,9 +157,12 @@
          PROFIT & LOSS
     ══════════════════════════════════ -->
     <div *ngIf="reportData && activeTab === 'profit-loss'">
-      <div class="mb-4">
-        <h3 class="text-lg font-bold text-slate-800">Profit &amp; Loss Statement</h3>
-        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      <div class="mb-4 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Profit &amp; Loss Statement</h3>
+          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
 
       <!-- Revenue -->
@@ -213,7 +219,7 @@
         <span [class.text-green-700]="reportData.net_income >= 0"
               [class.text-red-700]="reportData.net_income < 0"
               class="font-mono text-lg">
-          {{ reportData.net_income | number:'1.2-2' }}
+          {{ money(reportData.net_income) }}
         </span>
       </div>
     </div>
@@ -222,9 +228,12 @@
          BALANCE SHEET
     ══════════════════════════════════ -->
     <div *ngIf="reportData && activeTab === 'balance-sheet'">
-      <div class="mb-4">
-        <h3 class="text-lg font-bold text-slate-800">Balance Sheet</h3>
-        <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+      <div class="mb-4 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Balance Sheet</h3>
+          <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -296,7 +305,7 @@
 
           <div class="rounded-xl p-4 font-bold text-right bg-slate-50 border border-slate-200">
             <span class="text-slate-600 mr-4">Total Liabilities &amp; Equity</span>
-            <span class="font-mono text-slate-900">{{ (reportData.total_liabilities + reportData.total_equity) | number:'1.2-2' }}</span>
+            <span class="font-mono text-slate-900">{{ money(reportData.total_liabilities + reportData.total_equity) }}</span>
           </div>
         </div>
       </div>
@@ -306,9 +315,12 @@
          CASH FLOW
     ══════════════════════════════════ -->
     <div *ngIf="reportData && activeTab === 'cash-flow'">
-      <div class="mb-4">
-        <h3 class="text-lg font-bold text-slate-800">Cash Flow Statement</h3>
-        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      <div class="mb-4 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Cash Flow Statement</h3>
+          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
 
       <ng-container *ngFor="let section of [
@@ -357,7 +369,7 @@
         <span class="font-mono text-lg"
               [class.text-green-700]="reportData.net_cash_flow >= 0"
               [class.text-red-700]="reportData.net_cash_flow < 0">
-          {{ reportData.net_cash_flow | number:'1.2-2' }}
+          {{ money(reportData.net_cash_flow) }}
         </span>
       </div>
     </div>
@@ -366,9 +378,12 @@
          GENERAL LEDGER
     ══════════════════════════════════ -->
     <div *ngIf="reportData && activeTab === 'general-ledger'">
-      <div class="mb-4">
-        <h3 class="text-lg font-bold text-slate-800">General Ledger</h3>
-        <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+      <div class="mb-4 flex justify-between items-baseline">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">General Ledger</h3>
+          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+        </div>
+        <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
 
       <div *ngIf="reportData.accounts.length === 0" class="text-center text-slate-400 py-8">
@@ -428,7 +443,9 @@
           <h3 class="text-lg font-bold text-slate-800">Journal Report</h3>
           <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
         </div>
-        <span class="text-sm text-slate-500">{{ reportData.total_entries }} entries</span>
+        <span class="text-sm text-slate-500">
+          {{ reportData.total_entries }} entries · All amounts in {{ currencyCode }}
+        </span>
       </div>
 
       <div *ngIf="reportData.journals.length === 0" class="text-center text-slate-400 py-8">

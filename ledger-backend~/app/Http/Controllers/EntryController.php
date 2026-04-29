@@ -49,15 +49,16 @@ class EntryController extends Controller
                 'cr_total' => $crTotal,
             ]);
 
-            // B. Create the Rows
-            foreach ($request->items as $item) {
-                EntryItem::create([
-                    'entry_id' => $entry->id,
-                    'group_id' => $item['group_id'], // Account ID
-                    'dc' => $item['dc'],             // D or C
-                    'amount' => $item['amount'],
-                ]);
-            }
+            $now = now();
+            $rows = array_map(fn($item) => [
+                'entry_id'   => $entry->id,
+                'group_id'   => $item['group_id'],
+                'dc'         => $item['dc'],
+                'amount'     => $item['amount'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $request->items);
+            EntryItem::insert($rows);
 
             return $entry->load('items');
         });

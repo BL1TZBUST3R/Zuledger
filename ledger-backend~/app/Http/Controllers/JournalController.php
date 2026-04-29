@@ -15,14 +15,20 @@ class JournalController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index($ledgerId)
+    public function index($ledgerId, Request $request)
     {
         $ledger = Ledger::findOrFail($ledgerId);
         $this->authorize('view', $ledger);
 
+        // Cap to avoid unbounded payloads on long-lived ledgers.
+        $limit = min((int) $request->query('limit', 500), 2000);
+        if ($limit < 1) $limit = 500;
+
+        // Audit logs are only needed on the detail view; omit them here.
         $journals = Journal::where('ledger_id', $ledgerId)
-            ->with(['lines.account', 'user', 'auditLogs.user'])
+            ->with(['lines.account', 'user'])
             ->orderBy('journal_number', 'desc')
+            ->limit($limit)
             ->get();
 
         return response()->json($journals);
@@ -114,14 +120,16 @@ class JournalController extends Controller
                 'status'         => 'draft',
             ]);
 
-            foreach ($request->lines as $line) {
-                JournalLine::create([
-                    'journal_id' => $journal->id,
-                    'group_id'   => $line['group_id'],
-                    'amount'     => $line['amount'],
-                    'type'       => $line['type'],
-                ]);
-            }
+            $now = now();
+            $rows = array_map(fn($line) => [
+                'journal_id' => $journal->id,
+                'group_id'   => $line['group_id'],
+                'amount'     => $line['amount'],
+                'type'       => $line['type'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $request->lines);
+            JournalLine::insert($rows);
 
             JournalAuditLog::create([
                 'journal_id' => $journal->id,
@@ -213,14 +221,16 @@ class JournalController extends Controller
 
             $journal->lines()->delete();
 
-            foreach ($request->lines as $line) {
-                JournalLine::create([
-                    'journal_id' => $journal->id,
-                    'group_id'   => $line['group_id'],
-                    'amount'     => $line['amount'],
-                    'type'       => $line['type'],
-                ]);
-            }
+            $now = now();
+            $rows = array_map(fn($line) => [
+                'journal_id' => $journal->id,
+                'group_id'   => $line['group_id'],
+                'amount'     => $line['amount'],
+                'type'       => $line['type'],
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], $request->lines);
+            JournalLine::insert($rows);
 
             JournalAuditLog::create([
                 'journal_id' => $journal->id,
@@ -295,14 +305,16 @@ class JournalController extends Controller
                 'status'         => 'posted',
             ]);
 
-            foreach ($journal->lines as $line) {
-                JournalLine::create([
-                    'journal_id' => $reversal->id,
-                    'group_id'   => $line->group_id,
-                    'amount'     => $line->amount,
-                    'type'       => $line->type === 'DR' ? 'CR' : 'DR',
-                ]);
-            }
+            $now = now();
+            $rows = $journal->lines->map(fn($line) => [
+                'journal_id' => $reversal->id,
+                'group_id'   => $line->group_id,
+                'amount'     => $line->amount,
+                'type'       => $line->type === 'DR' ? 'CR' : 'DR',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+            JournalLine::insert($rows);
 
             // Log audit on the original journal
             JournalAuditLog::create([
