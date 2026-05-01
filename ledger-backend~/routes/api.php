@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\MfaController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -11,12 +12,23 @@ use Illuminate\Support\Facades\Route;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// MFA login challenge (public — protected by the challenge id + code)
+Route::post('/mfa/verify', [MfaController::class, 'verify']);
+Route::post('/mfa/resend', [MfaController::class, 'resend']);
+
 // Currency rates (public, cached — used by the converter widget)
 Route::get('/currency/rates', [App\Http\Controllers\CurrencyController::class, 'rates']);
 
 // Protected Routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // MFA management (logged-in user only)
+    Route::get('/mfa/status', [MfaController::class, 'status']);
+    Route::post('/mfa/enable', [MfaController::class, 'enable']);
+    Route::post('/mfa/confirm-enable', [MfaController::class, 'confirmEnable']);
+    Route::post('/mfa/disable', [MfaController::class, 'disable']);
+    Route::delete('/mfa/trusted-devices/{id}', [MfaController::class, 'revokeDevice']);
     
     // Ledger Management Routes
     Route::get('/ledgers', [LedgerController::class, 'index']);      // List my ledgers
