@@ -13,7 +13,9 @@ export class AuthService {
   }
 
   login(credentials: any): Observable<any> {
-    return this.http.post(`${API_BASE_URL}/login`, credentials);
+    const trustToken = localStorage.getItem('mfa_trust_token');
+    const payload = trustToken ? { ...credentials, trust_token: trustToken } : credentials;
+    return this.http.post(`${API_BASE_URL}/login`, payload);
   }
 
   logout(): void {

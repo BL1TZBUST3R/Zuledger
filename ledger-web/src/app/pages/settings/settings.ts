@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { SettingsService, LedgerSettings } from '../../services/settings.service';
 import { CurrencyService, Currency, REFRESH_OPTIONS, RefreshIntervalMs } from '../../services/currency.service';
+import { MfaService, MfaStatus, TrustedDevice } from '../../services/mfa.service';
 
 @Component({
   selector: 'app-settings',
@@ -36,6 +37,16 @@ export class SettingsComponent implements OnInit {
 
   // Live FX refresh-frequency options (exposed to template)
   refreshOptions = REFRESH_OPTIONS;
+
+  // ── MFA state ─────────────────────────────────────────────────────
+  mfaEnabled = false;
+  mfaTrustedDevices: TrustedDevice[] = [];
+  mfaLoading = false;
+  mfaStage: 'idle' | 'awaiting-code' | 'disable-prompt' = 'idle';
+  mfaCode = '';
+  mfaPassword = '';
+  mfaMessage = '';
+  mfaError = '';
 
   months = [
     { value: 1,  label: 'January' },
@@ -70,7 +81,8 @@ export class SettingsComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private settingsService: SettingsService,
-    public currencyService: CurrencyService
+    public currencyService: CurrencyService,
+    private mfaService: MfaService
   ) {
     // Re-run conversion whenever live rates update (auto-refresh tick or manual refresh).
     effect(() => {
@@ -86,6 +98,118 @@ export class SettingsComponent implements OnInit {
       this.loadSettings();
     }
     this.runConverter();
+    this.loadMfaStatus();
+  }
+
+  // ── MFA ────────────────────────────────────────────────────────────
+  loadMfaStatus() {
+    this.mfaService.status().subscribe({
+      next: (s: MfaStatus) => {
+        this.mfaEnabled = s.mfa_enabled;
+        this.mfaTrustedDevices = s.trusted_devices;
+      },
+      error: () => { /* not fatal — settings page still works */ }
+    });
+  }
+
+  startEnableMfa() {
+    this.mfaError = '';
+    this.mfaMessage = '';
+    this.mfaLoading = true;
+    this.mfaService.enable().subscribe({
+      next: (r) => {
+        this.mfaMessage = r.message;
+        this.mfaStage = 'awaiting-code';
+        this.mfaLoading = false;
+      },
+      error: (err) => {
+        this.mfaError = err?.error?.message || 'Failed to start MFA setup.';
+        this.mfaLoading = false;
+      }
+    });
+  }
+
+  confirmEnableMfa() {
+    if (this.mfaCode.length !== 6 || this.mfaLoading) return;
+    this.mfaError = '';
+    this.mfaLoading = true;
+    this.mfaService.confirmEnable(this.mfaCode).subscribe({
+      next: () => {
+        this.mfaCode = '';
+        this.mfaStage = 'idle';
+        this.mfaMessage = 'Two-factor authentication is now enabled.';
+        this.mfaLoading = false;
+        this.loadMfaStatus();
+      },
+      error: (err) => {
+        this.mfaError = err?.error?.message || 'Invalid or expired code.';
+        this.mfaLoading = false;
+      }
+    });
+  }
+
+  startDisableMfa() {
+    this.mfaError = '';
+    this.mfaMessage = '';
+    this.mfaPassword = '';
+    this.mfaStage = 'disable-prompt';
+  }
+
+  confirmDisableMfa() {
+    if (!this.mfaPassword || this.mfaLoading) return;
+    this.mfaError = '';
+    this.mfaLoading = true;
+    this.mfaService.disable(this.mfaPassword).subscribe({
+      next: () => {
+        this.mfaPassword = '';
+        this.mfaStage = 'idle';
+        this.mfaMessage = 'Two-factor authentication disabled.';
+        this.mfaLoading = false;
+        this.mfaService.clearTrustToken();
+        this.loadMfaStatus();
+      },
+      error: (err) => {
+        this.mfaError = err?.error?.message || 'Failed to disable MFA.';
+        this.mfaLoading = false;
+      }
+    });
+  }
+
+  cancelMfaPrompt() {
+    this.mfaCode = '';
+    this.mfaPassword = '';
+    this.mfaStage = 'idle';
+    this.mfaError = '';
+  }
+
+  revokeTrustedDevice(id: number) {
+    this.mfaService.revokeDevice(id).subscribe({
+      next: () => this.loadMfaStatus(),
+      error: (err) => {
+        this.mfaError = err?.error?.message || 'Failed to revoke device.';
+      }
+    });
+  }
+
+  onMfaCodeInput(value: string) {
+    this.mfaCode = value.replace(/\D/g, '').slice(0, 6);
+  }
+
+  formatDevice(d: TrustedDevice): string {
+    if (!d.user_agent) return 'Unknown device';
+    const ua = d.user_agent;
+    const browser = /Firefox/.test(ua) ? 'Firefox'
+                  : /Edg/.test(ua) ? 'Edge'
+                  : /Chrome/.test(ua) ? 'Chrome'
+                  : /Safari/.test(ua) ? 'Safari'
+                  : 'Browser';
+    const os = /Windows/.test(ua) ? 'Windows'
+             : /Mac OS X|Macintosh/.test(ua) ? 'macOS'
+             : /Android/.test(ua) ? 'Android'
+             : /iPhone|iPad|iOS/.test(ua) ? 'iOS'
+             : /Linux/.test(ua) ? 'Linux'
+             : 'Unknown';
+    return `${browser} on ${os}`;
   }
 
   loadSettings() {

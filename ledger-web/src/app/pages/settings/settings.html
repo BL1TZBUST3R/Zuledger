@@ -106,6 +106,106 @@
         </button>
       </div>
 
+      <!-- Two-Factor Authentication -->
+      <div class="pt-6 border-t border-slate-100">
+        <div class="flex items-start justify-between gap-2 mb-1">
+          <h3 class="text-sm font-bold text-slate-700">Two-Factor Authentication</h3>
+          <span *ngIf="mfaEnabled"
+                class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-green-700 bg-green-100 border border-green-200 rounded-full px-2 py-0.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Enabled
+          </span>
+          <span *ngIf="!mfaEnabled"
+                class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5">
+            Off
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mb-4">
+          When enabled, signing in requires a 6-digit code emailed to you. Trusted devices skip this for 30 days.
+        </p>
+
+        <div *ngIf="mfaMessage" class="mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+          {{ mfaMessage }}
+        </div>
+        <div *ngIf="mfaError" class="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          {{ mfaError }}
+        </div>
+
+        <!-- Idle state -->
+        <div *ngIf="mfaStage === 'idle'" class="flex gap-2">
+          <button *ngIf="!mfaEnabled" type="button" (click)="startEnableMfa()" [disabled]="mfaLoading"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
+            {{ mfaLoading ? 'Sending code…' : 'Enable two-factor' }}
+          </button>
+          <button *ngIf="mfaEnabled" type="button" (click)="startDisableMfa()"
+                  class="px-4 py-2 bg-white border border-red-300 text-red-700 text-sm font-semibold rounded-lg hover:bg-red-50 transition-colors">
+            Disable two-factor
+          </button>
+        </div>
+
+        <!-- Awaiting verification code (enable flow) -->
+        <div *ngIf="mfaStage === 'awaiting-code'" class="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+          <p class="text-xs text-slate-600">
+            We sent a 6-digit code to your email. Enter it below to confirm.
+          </p>
+          <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 [ngModel]="mfaCode" (ngModelChange)="onMfaCodeInput($event)"
+                 (keydown.enter)="confirmEnableMfa()"
+                 placeholder="000000"
+                 class="w-full max-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-center text-lg font-mono tracking-[0.4em] focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="flex gap-2">
+            <button type="button" (click)="confirmEnableMfa()" [disabled]="mfaCode.length !== 6 || mfaLoading"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
+              {{ mfaLoading ? 'Verifying…' : 'Confirm & enable' }}
+            </button>
+            <button type="button" (click)="cancelMfaPrompt()"
+                    class="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-100 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <!-- Disable confirmation (password) -->
+        <div *ngIf="mfaStage === 'disable-prompt'" class="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+          <p class="text-xs text-slate-600">
+            Enter your account password to turn off two-factor authentication.
+          </p>
+          <input type="password" autocomplete="current-password"
+                 [(ngModel)]="mfaPassword"
+                 (keydown.enter)="confirmDisableMfa()"
+                 placeholder="Account password"
+                 class="w-full max-w-[300px] px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <div class="flex gap-2">
+            <button type="button" (click)="confirmDisableMfa()" [disabled]="!mfaPassword || mfaLoading"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50">
+              {{ mfaLoading ? 'Disabling…' : 'Confirm & disable' }}
+            </button>
+            <button type="button" (click)="cancelMfaPrompt()"
+                    class="px-4 py-2 bg-white border border-slate-300 text-slate-600 text-sm font-semibold rounded-lg hover:bg-slate-100 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <!-- Trusted devices -->
+        <div *ngIf="mfaEnabled && mfaTrustedDevices.length > 0" class="mt-5">
+          <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Trusted devices</h4>
+          <div class="border border-slate-200 rounded-lg divide-y divide-slate-200">
+            <div *ngFor="let d of mfaTrustedDevices"
+                 class="flex justify-between items-center px-3 py-2 text-sm">
+              <div>
+                <div class="font-medium text-slate-700">{{ formatDevice(d) }}</div>
+                <div class="text-xs text-slate-400">
+                  Last used {{ d.last_used_at ? (d.last_used_at | date:'medium') : '—' }}
+                  · Expires {{ d.expires_at | date:'mediumDate' }}
+                </div>
+              </div>
+              <button type="button" (click)="revokeTrustedDevice(d.id)"
+                      class="text-xs text-red-600 hover:underline">Revoke</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Currency Converter -->
       <div class="pt-6 border-t border-slate-100">
         <div class="flex items-start justify-between gap-2 mb-1">
