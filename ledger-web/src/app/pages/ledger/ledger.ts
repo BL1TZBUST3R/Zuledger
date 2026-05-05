@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { LedgerService } from '../../services/ledger.service';
 import { ActiveLedgerService } from '../../services/active-ledger.service';
+import { LedgerDatePipe } from '../../shared/ledger-date.pipe';
 
 @Component({
   selector: 'app-ledger',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, LedgerDatePipe],
   templateUrl: './ledger.html',
 })
 export class LedgerComponent implements OnInit, OnDestroy {

@@ -44,8 +44,17 @@ constructor(private authService: AuthService, private router: Router) {}
 
   onRegister() {
     this.authService.register(this.user).subscribe({
-      next: () => {
-        alert('Account Created! Redirecting to login...');
+      next: (response: any) => {
+        if (response?.mfa_required) {
+          this.router.navigate(['/mfa-verify'], {
+            state: {
+              challenge: response.challenge,
+              emailHint: response.email_hint,
+            }
+          });
+          return;
+        }
+        // Fallback for any legacy flow: send to login.
         this.router.navigate(['/login']);
       },
       error: (error: any) => {

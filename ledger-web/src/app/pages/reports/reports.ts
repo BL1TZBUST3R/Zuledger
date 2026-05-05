@@ -5,13 +5,18 @@ import { FormsModule } from '@angular/forms';
 import { ReportService } from '../../services/report.service';
 import { SettingsService } from '../../services/settings.service';
 import { CurrencyService } from '../../services/currency.service';
+import { ActiveLedgerService, LedgerDateFormat } from '../../services/active-ledger.service';
+import { LedgerDatePipe } from '../../shared/ledger-date.pipe';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type ReportTab = 'trial-balance' | 'profit-loss' | 'balance-sheet' | 'cash-flow' | 'general-ledger' | 'journal-report';
 
 @Component({
   selector: 'app-reports',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, LedgerDatePipe],
+  providers: [LedgerDatePipe],
   templateUrl: './reports.html',
 })
 export class ReportsComponent implements OnInit {
@@ -21,6 +26,7 @@ export class ReportsComponent implements OnInit {
   isLoading = false;
   reportData: any = null;
   errorMessage = '';
+  showAccountCodes = true;
 
   today = new Date().toISOString().split('T')[0];
   yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
@@ -46,7 +52,9 @@ export class ReportsComponent implements OnInit {
     private route: ActivatedRoute,
     private reportService: ReportService,
     private settingsService: SettingsService,
-    private currencyService: CurrencyService
+    private currencyService: CurrencyService,
+    private activeLedger: ActiveLedgerService,
+    private datePipe: LedgerDatePipe
   ) {}
 
   ngOnInit() {
@@ -57,6 +65,7 @@ export class ReportsComponent implements OnInit {
         next: (s) => {
           this.currencyCode = (s.currency || 'USD').toUpperCase();
           this.currencyService.setActive(this.currencyCode);
+          this.activeLedger.setDateFormat(s.date_format as LedgerDateFormat);
         },
         error: () => { /* fall back to cached active currency */ }
       });
@@ -115,6 +124,181 @@ export class ReportsComponent implements OnInit {
 
   printReport() {
     window.print();
+  }
+
+  exportPdf() {
+    if (!this.reportData) return;
+
+    const landscape = ['general-ledger', 'cash-flow', 'journal-report'].includes(this.activeTab);
+    const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: landscape ? 'landscape' : 'portrait' });
+
+    const tabLabel = this.tabs.find(t => t.id === this.activeTab)?.label ?? 'Report';
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text(tabLabel, 40, 40);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(this.reportPeriodLabel(), 40, 58);
+    doc.text(`All amounts in ${this.currencyCode}`, 40, 72);
+
+    let cursorY = 90;
+    const showCodes = this.showAccountCodes;
+    const fmtMoney = (n: number) => Number(n ?? 0).toFixed(2);
+    const fmtDate = (v: string) => this.datePipe.transform(v);
+
+    const drawTable = (head: any[][], body: any[][], foot?: any[][]) => {
+      autoTable(doc, {
+        startY: cursorY,
+        head,
+        body,
+        foot,
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [241, 245, 249], textColor: 30, fontStyle: 'bold' },
+        footStyles: { fillColor: [241, 245, 249], textColor: 30, fontStyle: 'bold' },
+        margin: { left: 40, right: 40 },
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 16;
+    };
+
+    const sectionTitle = (label: string) => {
+      if (cursorY > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); cursorY = 40; }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.text(label, 40, cursorY);
+      cursorY += 6;
+      doc.setFont('helvetica', 'normal');
+    };
+
+    const d = this.reportData;
+    switch (this.activeTab) {
+      case 'trial-balance': {
+        const head = [showCodes
+          ? ['Code', 'Account', 'Type', 'Debit', 'Credit']
+          : ['Account', 'Type', 'Debit', 'Credit']];
+        const body = d.rows.map((r: any) => showCodes
+          ? [r.code, r.name, r.account_type, fmtMoney(r.debit), fmtMoney(r.credit)]
+          : [r.name, r.account_type, fmtMoney(r.debit), fmtMoney(r.credit)]);
+        const foot = [showCodes
+          ? [{ content: 'Totals', colSpan: 3, styles: { halign: 'right' } }, fmtMoney(d.total_debit), fmtMoney(d.total_credit)]
+          : [{ content: 'Totals', colSpan: 2, styles: { halign: 'right' } }, fmtMoney(d.total_debit), fmtMoney(d.total_credit)]];
+        drawTable(head, body, foot);
+        break;
+      }
+      case 'profit-loss': {
+        const head = [showCodes ? ['Code', 'Account', 'Balance'] : ['Account', 'Balance']];
+        sectionTitle('Revenue');
+        drawTable(head,
+          d.revenue.map((r: any) => showCodes ? [r.code, r.name, fmtMoney(r.balance)] : [r.name, fmtMoney(r.balance)]),
+          [[{ content: 'Total Revenue', colSpan: showCodes ? 2 : 1, styles: { halign: 'right' } }, fmtMoney(d.total_revenue)]]);
+        sectionTitle('Expenses');
+        drawTable(head,
+          d.expenses.map((r: any) => showCodes ? [r.code, r.name, fmtMoney(r.balance)] : [r.name, fmtMoney(r.balance)]),
+          [[{ content: 'Total Expenses', colSpan: showCodes ? 2 : 1, styles: { halign: 'right' } }, fmtMoney(d.total_expenses)]]);
+        sectionTitle(d.net_income >= 0 ? 'Net Income' : 'Net Loss');
+        drawTable([[{ content: '', colSpan: showCodes ? 2 : 1 }, 'Amount']],
+          [[{ content: d.net_income >= 0 ? 'Net Income' : 'Net Loss', colSpan: showCodes ? 2 : 1, styles: { halign: 'right', fontStyle: 'bold' } }, fmtMoney(d.net_income)]]);
+        break;
+      }
+      case 'balance-sheet': {
+        const head = [showCodes ? ['Code', 'Account', 'Balance'] : ['Account', 'Balance']];
+        sectionTitle('Assets');
+        drawTable(head,
+          d.assets.map((r: any) => showCodes ? [r.code, r.name, fmtMoney(r.balance)] : [r.name, fmtMoney(r.balance)]),
+          [[{ content: 'Total Assets', colSpan: showCodes ? 2 : 1, styles: { halign: 'right' } }, fmtMoney(d.total_assets)]]);
+        sectionTitle('Liabilities');
+        drawTable(head,
+          d.liabilities.map((r: any) => showCodes ? [r.code, r.name, fmtMoney(r.balance)] : [r.name, fmtMoney(r.balance)]),
+          [[{ content: 'Total Liabilities', colSpan: showCodes ? 2 : 1, styles: { halign: 'right' } }, fmtMoney(d.total_liabilities)]]);
+        sectionTitle('Equity');
+        const equityRows = d.equity.map((r: any) => showCodes ? [r.code, r.name, fmtMoney(r.balance)] : [r.name, fmtMoney(r.balance)]);
+        equityRows.push(showCodes ? ['', 'Retained Earnings', fmtMoney(d.retained_earnings)] : ['Retained Earnings', fmtMoney(d.retained_earnings)]);
+        drawTable(head, equityRows,
+          [[{ content: 'Total Equity', colSpan: showCodes ? 2 : 1, styles: { halign: 'right' } }, fmtMoney(d.total_equity)]]);
+        break;
+      }
+      case 'cash-flow': {
+        const head = [showCodes
+          ? ['Code', 'Account', 'Debit', 'Credit', 'Net']
+          : ['Account', 'Debit', 'Credit', 'Net']];
+        const drawSection = (label: string, rows: any[], total: number) => {
+          sectionTitle(label);
+          drawTable(head,
+            rows.map((r: any) => showCodes
+              ? [r.code, r.name, fmtMoney(r.debit), fmtMoney(r.credit), fmtMoney(r.net)]
+              : [r.name, fmtMoney(r.debit), fmtMoney(r.credit), fmtMoney(r.net)]),
+            [[{ content: `Net ${label}`, colSpan: showCodes ? 4 : 3, styles: { halign: 'right' } }, fmtMoney(total)]]);
+        };
+        drawSection('Operating Activities', d.operating, d.total_operating);
+        drawSection('Investing Activities', d.investing, d.total_investing);
+        drawSection('Financing Activities', d.financing, d.total_financing);
+        sectionTitle('Net Cash Flow');
+        drawTable([[{ content: 'Net Cash Flow' }, 'Amount']],
+          [[{ content: 'Net Cash Flow', styles: { halign: 'right', fontStyle: 'bold' } }, fmtMoney(d.net_cash_flow)]]);
+        break;
+      }
+      case 'general-ledger': {
+        const head = [['Date', 'J#', 'Description', 'Debit', 'Credit', 'Balance']];
+        for (const acc of d.accounts) {
+          const title = showCodes ? `${acc.account_code} — ${acc.account_name}` : acc.account_name;
+          sectionTitle(title);
+          drawTable(head,
+            acc.entries.map((e: any) => [
+              fmtDate(e.date),
+              e.journal_number,
+              e.description || '',
+              e.debit > 0 ? fmtMoney(e.debit) : '',
+              e.credit > 0 ? fmtMoney(e.credit) : '',
+              fmtMoney(e.balance),
+            ]),
+            [[{ content: 'Closing Balance', colSpan: 5, styles: { halign: 'right' } }, fmtMoney(acc.closing_balance)]]);
+        }
+        break;
+      }
+      case 'journal-report': {
+        const head = [['J#', 'Date', 'Status', 'Account', 'Type', 'Amount']];
+        const body: any[] = [];
+        for (const j of d.journals) {
+          for (const l of j.lines) {
+            const acc = l.account
+              ? (showCodes ? `${l.account.code} — ${l.account.name}` : l.account.name)
+              : '';
+            body.push([
+              `J${j.journal_number}`,
+              fmtDate(j.date),
+              j.status,
+              acc,
+              l.type,
+              fmtMoney(l.amount),
+            ]);
+          }
+        }
+        drawTable(head, body);
+        break;
+      }
+    }
+
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      const pageH = doc.internal.pageSize.getHeight();
+      const pageW = doc.internal.pageSize.getWidth();
+      doc.text(`Page ${i} of ${pageCount}`, pageW - 40, pageH - 20, { align: 'right' });
+      doc.text(`Generated ${fmtDate(new Date().toISOString())}`, 40, pageH - 20);
+    }
+
+    doc.save(`${this.activeTab}-${this.today}.pdf`);
+  }
+
+  private reportPeriodLabel(): string {
+    const fmt = (v: string) => this.datePipe.transform(v);
+    const d = this.reportData;
+    if (this.usesAsAt()) return `As at ${fmt(d.as_at)}`;
+    if (this.usesDateRange()) return `${fmt(d.from)} — ${fmt(d.to)}`;
+    return '';
   }
 
   exportCsv() {

@@ -7,7 +7,14 @@
       "Bash(php -l app/Http/Controllers/ReportController.php app/Http/Controllers/JournalController.php app/Http/Controllers/LedgerController.php app/Http/Controllers/EntryController.php app/Http/Controllers/AccountController.php app/Models/Ledger.php)",
       "Bash(php -l app/Http/Controllers/ReportController.php app/Http/Controllers/LedgerController.php)",
       "Bash(php -l app/Http/Controllers/CurrencyController.php app/Http/Controllers/ReportController.php app/Http/Controllers/JournalController.php app/Http/Controllers/LedgerController.php app/Http/Controllers/EntryController.php app/Http/Controllers/AccountController.php app/Http/Controllers/SettingsController.php app/Models/Ledger.php app/Models/EntryItem.php database/migrations/2026_04_22_000000_add_currency_to_ledgers_table.php)",
-      "Bash(php -l app/Http/Controllers/MfaController.php app/Http/Controllers/AuthController.php app/Models/User.php app/Models/MfaTrustedDevice.php app/Services/ResendMailer.php config/services.php routes/api.php database/migrations/2026_04_30_000000_add_mfa_to_users_table.php database/migrations/2026_04_30_000001_create_mfa_trusted_devices_table.php)"
+      "Bash(php -l app/Http/Controllers/MfaController.php app/Http/Controllers/AuthController.php app/Models/User.php app/Models/MfaTrustedDevice.php app/Services/ResendMailer.php config/services.php routes/api.php database/migrations/2026_04_30_000000_add_mfa_to_users_table.php database/migrations/2026_04_30_000001_create_mfa_trusted_devices_table.php)",
+      "Bash(Get-ChildItem -Path \"D:\\\\DONT DELETE\\\\Desktop\\\\zuledger\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(npx --no-install ng build --configuration development)",
+      "Bash(php -l app/Http/Controllers/AuthController.php)",
+      "Bash(php -l app/Http/Controllers/MfaController.php)",
+      "Bash(php -l database/migrations/2026_05_05_000000_enable_mfa_for_existing_users.php)",
+      "Bash(npm install *)"
     ]
   }
 }

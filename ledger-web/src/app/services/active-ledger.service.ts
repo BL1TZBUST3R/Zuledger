@@ -1,15 +1,25 @@
 import { Injectable, signal } from '@angular/core';
 
+export type LedgerDateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY';
+
 @Injectable({ providedIn: 'root' })
 export class ActiveLedgerService {
   readonly ledgerName = signal<string | null>(localStorage.getItem('active_ledger_name'));
   readonly ledgerId = signal<string | null>(localStorage.getItem('active_ledger_id'));
+  readonly dateFormat = signal<LedgerDateFormat>(
+    (localStorage.getItem('active_ledger_date_format') as LedgerDateFormat) || 'DD/MM/YYYY'
+  );
 
   set(id: string, name: string) {
     this.ledgerId.set(id);
     this.ledgerName.set(name);
     localStorage.setItem('active_ledger_id', id);
     localStorage.setItem('active_ledger_name', name);
+  }
+
+  setDateFormat(fmt: LedgerDateFormat) {
+    this.dateFormat.set(fmt);
+    localStorage.setItem('active_ledger_date_format', fmt);
   }
 
   clear() {

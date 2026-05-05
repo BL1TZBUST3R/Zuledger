@@ -7,7 +7,11 @@
         <h2 class="text-xl font-bold text-slate-800">Reports</h2>
         <p class="text-sm text-slate-500 mt-1">Financial statements and analysis</p>
       </div>
-      <div class="flex gap-2 print:hidden">
+      <div class="flex items-center gap-3 print:hidden">
+        <label *ngIf="reportData" class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+          <input type="checkbox" [(ngModel)]="showAccountCodes" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          Show account codes
+        </label>
         <button *ngIf="reportData" (click)="exportCsv()"
                 class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -15,12 +19,19 @@
           </svg>
           Export CSV
         </button>
+        <button *ngIf="reportData" (click)="exportPdf()"
+                class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Export PDF
+        </button>
         <button *ngIf="reportData" (click)="printReport()"
                 class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-slate-700 rounded-lg hover:bg-slate-800 transition-colors">
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
-          Print / PDF
+          Print
         </button>
       </div>
     </div>
@@ -112,14 +123,14 @@
       <div class="mb-4 print:mb-2 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Trial Balance</h3>
-          <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">As at {{ reportData.as_at | ledgerDate }}</p>
         </div>
         <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
       <table class="w-full text-sm border-collapse">
         <thead>
           <tr class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
-            <th class="px-4 py-3 text-left border-b border-slate-200 w-24">Code</th>
+            <th *ngIf="showAccountCodes" class="px-4 py-3 text-left border-b border-slate-200 w-24">Code</th>
             <th class="px-4 py-3 text-left border-b border-slate-200">Account Name</th>
             <th class="px-4 py-3 text-left border-b border-slate-200 w-32">Type</th>
             <th class="px-4 py-3 text-right border-b border-slate-200 w-36">Debit</th>
@@ -128,24 +139,24 @@
         </thead>
         <tbody class="divide-y divide-slate-100">
           <tr *ngFor="let row of reportData.rows" class="hover:bg-slate-50">
-            <td class="px-4 py-2.5 font-mono text-slate-600">{{ row.code }}</td>
+            <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-600">{{ row.code }}</td>
             <td class="px-4 py-2.5 text-slate-800">{{ row.name }}</td>
             <td class="px-4 py-2.5 capitalize text-slate-500">{{ row.account_type }}</td>
             <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ row.debit > 0 ? (row.debit | number:'1.2-2') : '' }}</td>
             <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ row.credit > 0 ? (row.credit | number:'1.2-2') : '' }}</td>
           </tr>
           <tr *ngIf="reportData.rows.length === 0">
-            <td colspan="5" class="px-4 py-8 text-center text-slate-400">No transactions found for this period.</td>
+            <td [attr.colspan]="showAccountCodes ? 5 : 4" class="px-4 py-8 text-center text-slate-400">No transactions found for this period.</td>
           </tr>
         </tbody>
         <tfoot>
           <tr class="bg-slate-50 font-bold border-t-2 border-slate-300">
-            <td class="px-4 py-3" colspan="3" class="text-right text-slate-700">Totals</td>
+            <td class="px-4 py-3 text-right text-slate-700" [attr.colspan]="showAccountCodes ? 3 : 2">Totals</td>
             <td class="px-4 py-3 text-right font-mono text-slate-900">{{ reportData.total_debit | number:'1.2-2' }}</td>
             <td class="px-4 py-3 text-right font-mono text-slate-900">{{ reportData.total_credit | number:'1.2-2' }}</td>
           </tr>
           <tr *ngIf="reportData.total_debit !== reportData.total_credit">
-            <td colspan="5" class="px-4 py-2 text-center text-red-600 text-xs font-bold">
+            <td [attr.colspan]="showAccountCodes ? 5 : 4" class="px-4 py-2 text-center text-red-600 text-xs font-bold">
               Warning: Trial balance does not balance. Difference: {{ (reportData.total_debit - reportData.total_credit) | number:'1.2-2' }}
             </td>
           </tr>
@@ -160,7 +171,7 @@
       <div class="mb-4 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Profit &amp; Loss Statement</h3>
-          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">{{ reportData.from | ledgerDate }} — {{ reportData.to | ledgerDate }}</p>
         </div>
         <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
@@ -171,7 +182,7 @@
         <table class="w-full text-sm border-collapse">
           <tbody class="divide-y divide-slate-100">
             <tr *ngFor="let r of reportData.revenue" class="hover:bg-slate-50">
-              <td class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
+              <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
               <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
               <td class="px-4 py-2.5 text-right font-mono w-40 text-green-700">{{ r.balance | number:'1.2-2' }}</td>
             </tr>
@@ -181,7 +192,7 @@
           </tbody>
           <tfoot>
             <tr class="bg-green-50 font-bold border-t border-green-200">
-              <td class="px-4 py-2.5" colspan="2">Total Revenue</td>
+              <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 2 : 1">Total Revenue</td>
               <td class="px-4 py-2.5 text-right font-mono text-green-700">{{ reportData.total_revenue | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
@@ -194,7 +205,7 @@
         <table class="w-full text-sm border-collapse">
           <tbody class="divide-y divide-slate-100">
             <tr *ngFor="let r of reportData.expenses" class="hover:bg-slate-50">
-              <td class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
+              <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500 w-24">{{ r.code }}</td>
               <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
               <td class="px-4 py-2.5 text-right font-mono w-40 text-red-700">{{ r.balance | number:'1.2-2' }}</td>
             </tr>
@@ -204,7 +215,7 @@
           </tbody>
           <tfoot>
             <tr class="bg-red-50 font-bold border-t border-red-200">
-              <td class="px-4 py-2.5" colspan="2">Total Expenses</td>
+              <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 2 : 1">Total Expenses</td>
               <td class="px-4 py-2.5 text-right font-mono text-red-700">{{ reportData.total_expenses | number:'1.2-2' }}</td>
             </tr>
           </tfoot>
@@ -231,7 +242,7 @@
       <div class="mb-4 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Balance Sheet</h3>
-          <p class="text-sm text-slate-500">As at {{ reportData.as_at | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">As at {{ reportData.as_at | ledgerDate }}</p>
         </div>
         <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
@@ -244,14 +255,14 @@
           <table class="w-full text-sm border-collapse">
             <tbody class="divide-y divide-slate-100">
               <tr *ngFor="let r of reportData.assets" class="hover:bg-slate-50">
-                <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
                 <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
                 <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="bg-blue-50 font-bold border-t border-blue-200">
-                <td class="px-4 py-2.5" colspan="2">Total Assets</td>
+                <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 2 : 1">Total Assets</td>
                 <td class="px-4 py-2.5 text-right font-mono text-blue-700">{{ reportData.total_assets | number:'1.2-2' }}</td>
               </tr>
             </tfoot>
@@ -265,14 +276,14 @@
             <table class="w-full text-sm border-collapse">
               <tbody class="divide-y divide-slate-100">
                 <tr *ngFor="let r of reportData.liabilities" class="hover:bg-slate-50">
-                  <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                  <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
                   <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
                   <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr class="bg-orange-50 font-bold border-t border-orange-200">
-                  <td class="px-4 py-2.5" colspan="2">Total Liabilities</td>
+                  <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 2 : 1">Total Liabilities</td>
                   <td class="px-4 py-2.5 text-right font-mono text-orange-700">{{ reportData.total_liabilities | number:'1.2-2' }}</td>
                 </tr>
               </tfoot>
@@ -284,19 +295,19 @@
             <table class="w-full text-sm border-collapse">
               <tbody class="divide-y divide-slate-100">
                 <tr *ngFor="let r of reportData.equity" class="hover:bg-slate-50">
-                  <td class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
+                  <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500 w-20">{{ r.code }}</td>
                   <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
                   <td class="px-4 py-2.5 text-right font-mono w-36">{{ r.balance | number:'1.2-2' }}</td>
                 </tr>
                 <tr class="hover:bg-slate-50 italic text-slate-500">
-                  <td class="px-4 py-2.5 font-mono w-20"></td>
+                  <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono w-20"></td>
                   <td class="px-4 py-2.5">Retained Earnings</td>
                   <td class="px-4 py-2.5 text-right font-mono w-36">{{ reportData.retained_earnings | number:'1.2-2' }}</td>
                 </tr>
               </tbody>
               <tfoot>
                 <tr class="bg-purple-50 font-bold border-t border-purple-200">
-                  <td class="px-4 py-2.5" colspan="2">Total Equity</td>
+                  <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 2 : 1">Total Equity</td>
                   <td class="px-4 py-2.5 text-right font-mono text-purple-700">{{ reportData.total_equity | number:'1.2-2' }}</td>
                 </tr>
               </tfoot>
@@ -318,7 +329,7 @@
       <div class="mb-4 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Cash Flow Statement</h3>
-          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">{{ reportData.from | ledgerDate }} — {{ reportData.to | ledgerDate }}</p>
         </div>
         <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
@@ -333,7 +344,7 @@
           <table class="w-full text-sm border-collapse">
             <thead>
               <tr class="bg-slate-50 text-slate-500 uppercase text-xs font-bold tracking-wider">
-                <th class="px-4 py-2 text-left w-20">Code</th>
+                <th *ngIf="showAccountCodes" class="px-4 py-2 text-left w-20">Code</th>
                 <th class="px-4 py-2 text-left">Account</th>
                 <th class="px-4 py-2 text-right w-32">Debit</th>
                 <th class="px-4 py-2 text-right w-32">Credit</th>
@@ -342,19 +353,19 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr *ngFor="let r of section.rows" class="hover:bg-slate-50">
-                <td class="px-4 py-2.5 font-mono text-slate-500">{{ r.code }}</td>
+                <td *ngIf="showAccountCodes" class="px-4 py-2.5 font-mono text-slate-500">{{ r.code }}</td>
                 <td class="px-4 py-2.5 text-slate-800">{{ r.name }}</td>
                 <td class="px-4 py-2.5 text-right font-mono">{{ r.debit | number:'1.2-2' }}</td>
                 <td class="px-4 py-2.5 text-right font-mono">{{ r.credit | number:'1.2-2' }}</td>
                 <td class="px-4 py-2.5 text-right font-mono" [class.text-green-700]="r.net > 0" [class.text-red-700]="r.net < 0">{{ r.net | number:'1.2-2' }}</td>
               </tr>
               <tr *ngIf="section.rows.length === 0">
-                <td colspan="5" class="px-4 py-3 text-center text-slate-400">No transactions.</td>
+                <td [attr.colspan]="showAccountCodes ? 5 : 4" class="px-4 py-3 text-center text-slate-400">No transactions.</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="bg-slate-50 font-bold border-t border-slate-300">
-                <td class="px-4 py-2.5" colspan="4">Net {{ section.label }}</td>
+                <td class="px-4 py-2.5" [attr.colspan]="showAccountCodes ? 4 : 3">Net {{ section.label }}</td>
                 <td class="px-4 py-2.5 text-right font-mono" [class.text-green-700]="section.total > 0" [class.text-red-700]="section.total < 0">{{ section.total | number:'1.2-2' }}</td>
               </tr>
             </tfoot>
@@ -381,7 +392,7 @@
       <div class="mb-4 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">General Ledger</h3>
-          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">{{ reportData.from | ledgerDate }} — {{ reportData.to | ledgerDate }}</p>
         </div>
         <p class="text-xs text-slate-500 font-medium">All amounts in {{ currencyCode }}</p>
       </div>
@@ -392,7 +403,7 @@
 
       <div *ngFor="let acc of reportData.accounts" class="mb-8">
         <div class="flex items-baseline gap-3 mb-2 px-1">
-          <span class="font-mono font-bold text-slate-700">{{ acc.account_code }}</span>
+          <span *ngIf="showAccountCodes" class="font-mono font-bold text-slate-700">{{ acc.account_code }}</span>
           <span class="font-bold text-slate-800">{{ acc.account_name }}</span>
           <span class="text-xs text-slate-400 capitalize">{{ acc.account_type }}</span>
         </div>
@@ -409,7 +420,7 @@
           </thead>
           <tbody class="divide-y divide-slate-100">
             <tr *ngFor="let e of acc.entries" class="hover:bg-slate-50">
-              <td class="px-4 py-2.5 text-slate-600">{{ e.date | date:'mediumDate' }}</td>
+              <td class="px-4 py-2.5 text-slate-600">{{ e.date | ledgerDate }}</td>
               <td class="px-4 py-2.5 font-mono text-slate-500">{{ e.journal_number }}</td>
               <td class="px-4 py-2.5 text-slate-700">{{ e.description || '—' }}</td>
               <td class="px-4 py-2.5 text-right font-mono text-slate-800">{{ e.debit > 0 ? (e.debit | number:'1.2-2') : '' }}</td>
@@ -441,7 +452,7 @@
       <div class="mb-4 flex justify-between items-baseline">
         <div>
           <h3 class="text-lg font-bold text-slate-800">Journal Report</h3>
-          <p class="text-sm text-slate-500">{{ reportData.from | date:'mediumDate' }} — {{ reportData.to | date:'mediumDate' }}</p>
+          <p class="text-sm text-slate-500">{{ reportData.from | ledgerDate }} — {{ reportData.to | ledgerDate }}</p>
         </div>
         <span class="text-sm text-slate-500">
           {{ reportData.total_entries }} entries · All amounts in {{ currencyCode }}
@@ -456,7 +467,7 @@
         <div class="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-200">
           <div class="flex items-center gap-4">
             <span class="font-mono font-bold text-slate-700">J{{ j.journal_number }}</span>
-            <span class="text-slate-600 text-sm">{{ j.date | date:'mediumDate' }}</span>
+            <span class="text-slate-600 text-sm">{{ j.date | ledgerDate }}</span>
             <span class="text-slate-700 text-sm font-medium">{{ j.description || '(no description)' }}</span>
           </div>
           <div class="flex items-center gap-3">
@@ -478,7 +489,7 @@
           <tbody class="divide-y divide-slate-50">
             <tr *ngFor="let line of j.lines" class="hover:bg-slate-50">
               <td class="px-4 py-2.5 text-slate-700">
-                <span *ngIf="line.account" class="font-mono text-slate-400 mr-2">{{ line.account.code }}</span>
+                <span *ngIf="line.account && showAccountCodes" class="font-mono text-slate-400 mr-2">{{ line.account.code }}</span>
                 {{ line.account ? line.account.name : '—' }}
               </td>
               <td class="px-4 py-2.5 text-center">

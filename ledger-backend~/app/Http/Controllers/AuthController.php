@@ -15,31 +15,28 @@ class AuthController extends Controller
 
     // 1. REGISTER NEW ACCOUNTANT
     public function register(Request $request) {
-        // Validate incoming data
         $fields = $request->validate([
             'name' => 'required|string',
             'email' => 'required|string|unique:users,email',
-            'password' => 'required|string|confirmed' 
+            'password' => 'required|string|confirmed'
         ]);
 
-        // Create the user
         $user = User::create([
-            'name' => $fields['name'],
-            'email' => $fields['email'],
-            'password' => Hash::make($fields['password'])
+            'name'        => $fields['name'],
+            'email'       => $fields['email'],
+            'password'    => Hash::make($fields['password']),
+            'mfa_enabled' => true,
         ]);
 
-        // 👇 2. ADD THIS BLOCK: Run the seeder for this new user
         $seeder = new GroupSeeder();
         $seeder->run($user);
-        // 👆 END NEW BLOCK
 
-        // Create a security token
-        $token = $user->createToken('myapptoken')->plainTextToken;
+        $challenge = $this->mfa->issueCode($user, 'verify your new account');
 
         return response()->json([
-            'user' => $user,
-            'token' => $token
+            'mfa_required' => true,
+            'challenge'    => $challenge,
+            'email_hint'   => $this->maskEmail($user->email),
         ], 201);
     }
 
@@ -57,20 +54,22 @@ class AuthController extends Controller
             return response()->json(['message' => 'Bad credentials'], 401);
         }
 
-        // MFA gate — if enabled and the device isn't already trusted, issue a
-        // challenge instead of a session token.
-        if ($user->mfa_enabled) {
-            $trusted = !empty($fields['trust_token'])
-                && $this->mfa->consumeTrustToken($user, $fields['trust_token']);
+        // MFA is mandatory — every login requires a code unless the device is
+        // already trusted. Backfill mfa_enabled for any legacy account.
+        if (!$user->mfa_enabled) {
+            $user->forceFill(['mfa_enabled' => true])->save();
+        }
 
-            if (!$trusted) {
-                $challenge = $this->mfa->issueCode($user, 'sign in');
-                return response()->json([
-                    'mfa_required' => true,
-                    'challenge'    => $challenge,
-                    'email_hint'   => $this->maskEmail($user->email),
-                ], 200);
-            }
+        $trusted = !empty($fields['trust_token'])
+            && $this->mfa->consumeTrustToken($user, $fields['trust_token']);
+
+        if (!$trusted) {
+            $challenge = $this->mfa->issueCode($user, 'sign in');
+            return response()->json([
+                'mfa_required' => true,
+                'challenge'    => $challenge,
+                'email_hint'   => $this->maskEmail($user->email),
+            ], 200);
         }
 
         $token = $user->createToken('myapptoken')->plainTextToken;

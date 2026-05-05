@@ -4,6 +4,7 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { JournalService } from '../../services/journal';
 import { AccountService } from '../../services/account';
+import { LedgerDatePipe } from '../../shared/ledger-date.pipe';
 
 interface JournalLine {
   group_id: number;
@@ -32,7 +33,7 @@ interface Account {
 @Component({
   selector: 'app-journal-entry',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, LedgerDatePipe],
   templateUrl: './journal-entry.html',
 })
 export class JournalEntryComponent implements OnInit {

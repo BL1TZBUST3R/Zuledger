@@ -87,29 +87,13 @@ class MfaController extends Controller
 
     /**
      * POST /api/mfa/disable
-     * Requires the current account password.
+     * MFA is mandatory for all accounts — disabling is not permitted.
      */
     public function disable(Request $request)
     {
-        $request->validate(['password' => 'required|string']);
-
-        $user = Auth::user();
-
-        if (!Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Incorrect password.'], 422);
-        }
-
-        $user->forceFill([
-            'mfa_enabled'         => false,
-            'mfa_code_hash'       => null,
-            'mfa_code_expires_at' => null,
-            'mfa_challenge'       => null,
-            'mfa_attempts'        => 0,
-        ])->save();
-
-        $user->mfaTrustedDevices()->delete();
-
-        return response()->json(['message' => 'MFA disabled.']);
+        return response()->json([
+            'message' => 'Two-factor authentication is required and cannot be disabled.',
+        ], 403);
     }
 
     /**

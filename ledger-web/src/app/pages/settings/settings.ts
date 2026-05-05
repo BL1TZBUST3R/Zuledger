@@ -5,6 +5,7 @@ import { ActivatedRoute } from '@angular/router';
 import { SettingsService, LedgerSettings } from '../../services/settings.service';
 import { CurrencyService, Currency, REFRESH_OPTIONS, RefreshIntervalMs } from '../../services/currency.service';
 import { MfaService, MfaStatus, TrustedDevice } from '../../services/mfa.service';
+import { ActiveLedgerService, LedgerDateFormat } from '../../services/active-ledger.service';
 
 @Component({
   selector: 'app-settings',
@@ -39,13 +40,9 @@ export class SettingsComponent implements OnInit {
   refreshOptions = REFRESH_OPTIONS;
 
   // ── MFA state ─────────────────────────────────────────────────────
-  mfaEnabled = false;
+  // MFA is mandatory; we only display status + trusted devices here.
+  mfaEnabled = true;
   mfaTrustedDevices: TrustedDevice[] = [];
-  mfaLoading = false;
-  mfaStage: 'idle' | 'awaiting-code' | 'disable-prompt' = 'idle';
-  mfaCode = '';
-  mfaPassword = '';
-  mfaMessage = '';
   mfaError = '';
 
   months = [
@@ -82,7 +79,8 @@ export class SettingsComponent implements OnInit {
     private route: ActivatedRoute,
     private settingsService: SettingsService,
     public currencyService: CurrencyService,
-    private mfaService: MfaService
+    private mfaService: MfaService,
+    private activeLedger: ActiveLedgerService
   ) {
     // Re-run conversion whenever live rates update (auto-refresh tick or manual refresh).
     effect(() => {
@@ -112,76 +110,6 @@ export class SettingsComponent implements OnInit {
     });
   }
 
-  startEnableMfa() {
-    this.mfaError = '';
-    this.mfaMessage = '';
-    this.mfaLoading = true;
-    this.mfaService.enable().subscribe({
-      next: (r) => {
-        this.mfaMessage = r.message;
-        this.mfaStage = 'awaiting-code';
-        this.mfaLoading = false;
-      },
-      error: (err) => {
-        this.mfaError = err?.error?.message || 'Failed to start MFA setup.';
-        this.mfaLoading = false;
-      }
-    });
-  }
-
-  confirmEnableMfa() {
-    if (this.mfaCode.length !== 6 || this.mfaLoading) return;
-    this.mfaError = '';
-    this.mfaLoading = true;
-    this.mfaService.confirmEnable(this.mfaCode).subscribe({
-      next: () => {
-        this.mfaCode = '';
-        this.mfaStage = 'idle';
-        this.mfaMessage = 'Two-factor authentication is now enabled.';
-        this.mfaLoading = false;
-        this.loadMfaStatus();
-      },
-      error: (err) => {
-        this.mfaError = err?.error?.message || 'Invalid or expired code.';
-        this.mfaLoading = false;
-      }
-    });
-  }
-
-  startDisableMfa() {
-    this.mfaError = '';
-    this.mfaMessage = '';
-    this.mfaPassword = '';
-    this.mfaStage = 'disable-prompt';
-  }
-
-  confirmDisableMfa() {
-    if (!this.mfaPassword || this.mfaLoading) return;
-    this.mfaError = '';
-    this.mfaLoading = true;
-    this.mfaService.disable(this.mfaPassword).subscribe({
-      next: () => {
-        this.mfaPassword = '';
-        this.mfaStage = 'idle';
-        this.mfaMessage = 'Two-factor authentication disabled.';
-        this.mfaLoading = false;
-        this.mfaService.clearTrustToken();
-        this.loadMfaStatus();
-      },
-      error: (err) => {
-        this.mfaError = err?.error?.message || 'Failed to disable MFA.';
-        this.mfaLoading = false;
-      }
-    });
-  }
-
-  cancelMfaPrompt() {
-    this.mfaCode = '';
-    this.mfaPassword = '';
-    this.mfaStage = 'idle';
-    this.mfaError = '';
-  }
-
   revokeTrustedDevice(id: number) {
     this.mfaService.revokeDevice(id).subscribe({
       next: () => this.loadMfaStatus(),
@@ -189,10 +117,6 @@ export class SettingsComponent implements OnInit {
         this.mfaError = err?.error?.message || 'Failed to revoke device.';
       }
     });
-  }
-
-  onMfaCodeInput(value: string) {
-    this.mfaCode = value.replace(/\D/g, '').slice(0, 6);
   }
 
   formatDevice(d: TrustedDevice): string {
@@ -218,6 +142,7 @@ export class SettingsComponent implements OnInit {
       next: (data) => {
         this.settings = { ...data, currency: (data.currency || 'USD').toUpperCase() };
         this.currencyService.setActive(this.settings.currency);
+        this.activeLedger.setDateFormat(this.settings.date_format as LedgerDateFormat);
         this.converterFrom = this.settings.currency;
         this.runConverter();
         this.isLoading = false;
@@ -239,6 +164,7 @@ export class SettingsComponent implements OnInit {
       next: () => {
         this.successMessage = 'Settings saved successfully.';
         this.currencyService.setActive(this.settings.currency);
+        this.activeLedger.setDateFormat(this.settings.date_format as LedgerDateFormat);
         this.isSaving = false;
       },
       error: (err) => {
