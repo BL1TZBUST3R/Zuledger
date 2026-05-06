@@ -17,10 +17,10 @@ return [
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
-
+//Aligned this to variables in Render environment varuabkes
     'resend' => [
         'key'  => env('RESEND_API_KEY'),
-        'from' => env('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+        'from' => env('MAIL_FROM_ADDRESS', 'onboarding@resend.dev'),
     ],
 
     'ses' => [
